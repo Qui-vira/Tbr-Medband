@@ -10,6 +10,7 @@ Extract structured claims data. You do NOT approve coverage.
 - provider_name: healthcare provider name
 
 ## Output Format (JSON only)
+Pass through `institution_id` and `institution_name` from the case payload when provided (use empty string if absent).
 ```json
 {
   "status": "INTAKE_COMPLETE",
@@ -17,7 +18,9 @@ Extract structured claims data. You do NOT approve coverage.
   "requested_service": "",
   "procedure_code": "",
   "policy_number": "",
-  "provider_name": ""
+  "provider_name": "",
+  "institution_id": "",
+  "institution_name": ""
 }
 ```
 Set requested_service to procedure_code.

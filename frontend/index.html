@@ -125,10 +125,65 @@
       padding: 1.75rem;
     }
 
-    /* ── Sector cards ── */
-    .sector-section { margin-bottom: 1.75rem; }
+    /* ── Steps ── */
+    .step { display: none; }
+    .step.active { display: block; }
 
-    .sector-section > label.section-label {
+    .step-heading {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      letter-spacing: -0.01em;
+    }
+
+    .step-nav {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+
+    .step-nav .step-btn { flex: 1; }
+
+    .step-btn {
+      padding: 12px 24px;
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.9rem;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s;
+    }
+
+    .step-btn.primary {
+      background: var(--teal);
+      color: white;
+      border: none;
+    }
+
+    .step-btn.primary:hover:not(:disabled) { background: var(--teal-dim); }
+
+    .step-btn.secondary {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border-input);
+    }
+
+    .step-btn.secondary:hover {
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+
+    .step-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* ── Sector cards ── */
+    .sector-section { margin-bottom: 0; }
+
+    .sector-section > label.section-label,
+    .sector-section > .section-label {
       display: block;
       font-size: 0.75rem;
       font-weight: 600;
@@ -207,6 +262,159 @@
       color: var(--text-muted);
       margin-top: 0.25rem;
       line-height: 1.4;
+    }
+
+    /* ── Institution cards ── */
+    .institution-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    @media (min-width: 640px) {
+      .institution-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .institution-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-input);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+      text-align: left;
+    }
+
+    .institution-card:hover {
+      border-color: rgba(14, 124, 123, 0.4);
+      background: rgba(14, 124, 123, 0.05);
+    }
+
+    .institution-card.selected {
+      border-color: var(--teal);
+      background: rgba(14, 124, 123, 0.1);
+      box-shadow: 0 0 0 1px var(--teal);
+    }
+
+    .institution-check {
+      position: absolute;
+      top: 0.6rem;
+      right: 0.6rem;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--teal);
+      color: white;
+      font-size: 0.7rem;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+
+    .institution-card.selected .institution-check { display: flex; }
+
+    .institution-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1rem;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .institution-name {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 0.82rem;
+      line-height: 1.3;
+      padding-right: 1.25rem;
+    }
+
+    .institution-location {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    .institution-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      font-size: 0.68rem;
+    }
+
+    .institution-rating {
+      color: #F4A261;
+      font-weight: 600;
+    }
+
+    .institution-turnaround {
+      color: var(--text-muted);
+    }
+
+    .institution-specialties {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+    }
+
+    .specialty-pill {
+      font-size: 0.62rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+      border: 1px solid var(--border-input);
+    }
+
+    .plan-badge {
+      align-self: flex-start;
+      font-size: 0.62rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.2rem 0.5rem;
+      border-radius: 9999px;
+      margin-top: 0.15rem;
+    }
+
+    .plan-badge.enterprise {
+      background: rgba(14, 124, 123, 0.15);
+      color: var(--teal);
+      border: 1px solid rgba(14, 124, 123, 0.35);
+    }
+
+    .plan-badge.professional {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+      border: 1px solid var(--border-input);
+    }
+
+    .institution-loading,
+    .institution-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    .institution-error {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 1.5rem 1rem;
+      color: var(--danger);
+      font-size: 0.875rem;
     }
 
     /* ── Demo buttons ── */
@@ -585,135 +793,164 @@
       </div>
 
       <form id="caseForm">
-        <div class="sector-section">
-          <span class="section-label">Healthcare Sector</span>
-          <div class="sector-grid" id="sectorGrid">
-            <label class="sector-card selected" data-sector="pharmacy">
-              <input type="radio" name="sector" value="pharmacy" checked>
-              <span class="sector-card-icon">💊</span>
-              <span class="sector-card-name">Pharmacy</span>
-              <span class="sector-card-desc">Drug verification &amp; stock</span>
-            </label>
-            <label class="sector-card" data-sector="hospital_triage">
-              <input type="radio" name="sector" value="hospital_triage">
-              <span class="sector-card-icon">🏥</span>
-              <span class="sector-card-name">Hospital Triage</span>
-              <span class="sector-card-desc">Severity &amp; bed routing</span>
-            </label>
-            <label class="sector-card" data-sector="lab">
-              <input type="radio" name="sector" value="lab">
-              <span class="sector-card-icon">🔬</span>
-              <span class="sector-card-name">Lab / Diagnostics</span>
-              <span class="sector-card-desc">Referrals &amp; test slots</span>
-            </label>
-            <label class="sector-card" data-sector="mental_health">
-              <input type="radio" name="sector" value="mental_health">
-              <span class="sector-card-icon">🧠</span>
-              <span class="sector-card-name">Mental Health</span>
-              <span class="sector-card-desc">Risk screening &amp; matching</span>
-            </label>
-            <label class="sector-card" data-sector="hmo_claims">
-              <input type="radio" name="sector" value="hmo_claims">
-              <span class="sector-card-icon">📋</span>
-              <span class="sector-card-name">HMO / Insurance</span>
-              <span class="sector-card-desc">Policy &amp; claims routing</span>
-            </label>
-            <label class="sector-card" data-sector="emergency">
-              <input type="radio" name="sector" value="emergency">
-              <span class="sector-card-icon">🚨</span>
-              <span class="sector-card-name">Emergency</span>
-              <span class="sector-card-desc">P1/P2/P3 dispatch</span>
-            </label>
+        <input type="hidden" name="institution_id" id="institution_id" value="">
+
+        <!-- Step 1: Select Sector -->
+        <div id="step-1" class="step active">
+          <div class="sector-section">
+            <span class="section-label">Step 1 — Healthcare Sector</span>
+            <div class="sector-grid" id="sectorGrid">
+              <label class="sector-card selected" data-sector="pharmacy">
+                <input type="radio" name="sector" value="pharmacy" checked>
+                <span class="sector-card-icon">💊</span>
+                <span class="sector-card-name">Pharmacy</span>
+                <span class="sector-card-desc">Drug verification &amp; stock</span>
+              </label>
+              <label class="sector-card" data-sector="hospital_triage">
+                <input type="radio" name="sector" value="hospital_triage">
+                <span class="sector-card-icon">🏥</span>
+                <span class="sector-card-name">Hospital Triage</span>
+                <span class="sector-card-desc">Severity &amp; bed routing</span>
+              </label>
+              <label class="sector-card" data-sector="lab">
+                <input type="radio" name="sector" value="lab">
+                <span class="sector-card-icon">🔬</span>
+                <span class="sector-card-name">Lab / Diagnostics</span>
+                <span class="sector-card-desc">Referrals &amp; test slots</span>
+              </label>
+              <label class="sector-card" data-sector="mental_health">
+                <input type="radio" name="sector" value="mental_health">
+                <span class="sector-card-icon">🧠</span>
+                <span class="sector-card-name">Mental Health</span>
+                <span class="sector-card-desc">Risk screening &amp; matching</span>
+              </label>
+              <label class="sector-card" data-sector="hmo_claims">
+                <input type="radio" name="sector" value="hmo_claims">
+                <span class="sector-card-icon">📋</span>
+                <span class="sector-card-name">HMO / Insurance</span>
+                <span class="sector-card-desc">Policy &amp; claims routing</span>
+              </label>
+              <label class="sector-card" data-sector="emergency">
+                <input type="radio" name="sector" value="emergency">
+                <span class="sector-card-icon">🚨</span>
+                <span class="sector-card-name">Emergency</span>
+                <span class="sector-card-desc">P1/P2/P3 dispatch</span>
+              </label>
+            </div>
+          </div>
+          <div class="step-nav">
+            <button type="button" class="step-btn primary" id="step1Next">Next →</button>
           </div>
         </div>
 
-        <div class="field">
-          <label for="name" id="label-name">Patient / Caller Name</label>
-          <input type="text" id="name" name="name" placeholder="e.g. Ada Okonkwo" required>
+        <!-- Step 2: Select Institution -->
+        <div id="step-2" class="step">
+          <h2 class="step-heading" id="institutionHeading">Select a Pharmacy provider</h2>
+          <div class="institution-grid" id="institutionGrid">
+            <div class="institution-loading">Loading providers…</div>
+          </div>
+          <div class="step-nav">
+            <button type="button" class="step-btn secondary" id="step2Back">← Back</button>
+            <button type="button" class="step-btn primary" id="step2Next" disabled>Next →</button>
+          </div>
         </div>
 
-        <div class="field">
-          <label for="issue" id="label-issue">Issue / Complaint</label>
-          <textarea id="issue" name="issue" placeholder="Describe symptoms, concern, or emergency..." required></textarea>
-        </div>
+        <!-- Step 3: Form Fields -->
+        <div id="step-3" class="step">
+          <span class="section-label">Step 3 — Case Details</span>
 
-        <div class="field">
-          <label for="service" id="label-service">Requested Service</label>
-          <input type="text" id="service" name="service" placeholder="Drug name, test, procedure code..." required>
-        </div>
+          <div class="field">
+            <label for="name" id="label-name">Patient / Caller Name</label>
+            <input type="text" id="name" name="name" placeholder="e.g. Ada Okonkwo" required>
+          </div>
 
-        <div id="field-urgency" class="field sector-field" data-sectors="pharmacy,hospital_triage,lab,mental_health,hmo_claims">
-          <label for="urgency" id="label-urgency">Urgency</label>
-          <select id="urgency" name="urgency">
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high" selected>High</option>
-            <option value="critical">Critical</option>
-          </select>
-        </div>
+          <div class="field">
+            <label for="issue" id="label-issue">Issue / Complaint</label>
+            <textarea id="issue" name="issue" placeholder="Describe symptoms, concern, or emergency..." required></textarea>
+          </div>
 
-        <div id="field-prescription_code" class="field sector-field" data-sectors="pharmacy">
-          <label for="prescription_code">Prescription Code (if applicable)</label>
-          <input type="text" id="prescription_code" name="prescription_code" placeholder="TBR-DOC-0042">
-        </div>
+          <div class="field">
+            <label for="service" id="label-service">Requested Service</label>
+            <input type="text" id="service" name="service" placeholder="Drug name, test, procedure code..." required>
+          </div>
 
-        <div id="field-vitals_description" class="field sector-field" data-sectors="hospital_triage">
-          <label for="vitals_description">Vitals Description (optional)</label>
-          <input type="text" id="vitals_description" name="vitals_description" placeholder="e.g. BP 140/90, temp 38.5C">
-        </div>
+          <div id="field-urgency" class="field sector-field" data-sectors="pharmacy,hospital_triage,lab,mental_health,hmo_claims">
+            <label for="urgency" id="label-urgency">Urgency</label>
+            <select id="urgency" name="urgency">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high" selected>High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
 
-        <div id="field-referral_number" class="field sector-field" data-sectors="lab">
-          <label for="referral_number">Referral Number (if applicable)</label>
-          <input type="text" id="referral_number" name="referral_number" placeholder="REF-2026-001">
-        </div>
+          <div id="field-prescription_code" class="field sector-field" data-sectors="pharmacy">
+            <label for="prescription_code">Prescription Code (if applicable)</label>
+            <input type="text" id="prescription_code" name="prescription_code" placeholder="TBR-DOC-0042">
+          </div>
 
-        <div id="field-patient_id" class="field sector-field" data-sectors="lab">
-          <label for="patient_id">Patient ID (if applicable)</label>
-          <input type="text" id="patient_id" name="patient_id" placeholder="PAT-12345">
-        </div>
+          <div id="field-vitals_description" class="field sector-field" data-sectors="hospital_triage">
+            <label for="vitals_description">Vitals Description (optional)</label>
+            <input type="text" id="vitals_description" name="vitals_description" placeholder="e.g. BP 140/90, temp 38.5C">
+          </div>
 
-        <div id="field-duration" class="field sector-field" data-sectors="mental_health">
-          <label for="duration">Duration of Concern</label>
-          <input type="text" id="duration" name="duration" placeholder="e.g. 6 weeks">
-        </div>
+          <div id="field-referral_number" class="field sector-field" data-sectors="lab">
+            <label for="referral_number">Referral Number (if applicable)</label>
+            <input type="text" id="referral_number" name="referral_number" placeholder="REF-2026-001">
+          </div>
 
-        <div id="field-self_harm_flag" class="field sector-field" data-sectors="mental_health">
-          <label class="checkbox-label">
-            <input type="checkbox" id="self_harm_flag" name="self_harm_flag" value="true">
-            Self-harm or harm-to-others concern flagged
-          </label>
-        </div>
+          <div id="field-patient_id" class="field sector-field" data-sectors="lab">
+            <label for="patient_id">Patient ID (if applicable)</label>
+            <input type="text" id="patient_id" name="patient_id" placeholder="PAT-12345">
+          </div>
 
-        <div id="field-policy_number" class="field sector-field" data-sectors="hmo_claims">
-          <label for="policy_number">Policy Number</label>
-          <input type="text" id="policy_number" name="policy_number" placeholder="HMO-2024-001">
-        </div>
+          <div id="field-duration" class="field sector-field" data-sectors="mental_health">
+            <label for="duration">Duration of Concern</label>
+            <input type="text" id="duration" name="duration" placeholder="e.g. 6 weeks">
+          </div>
 
-        <div id="field-provider_name" class="field sector-field" data-sectors="hmo_claims">
-          <label for="provider_name">Provider Name</label>
-          <input type="text" id="provider_name" name="provider_name" placeholder="Hospital or clinic name">
-        </div>
+          <div id="field-self_harm_flag" class="field sector-field" data-sectors="mental_health">
+            <label class="checkbox-label">
+              <input type="checkbox" id="self_harm_flag" name="self_harm_flag" value="true">
+              Self-harm or harm-to-others concern flagged
+            </label>
+          </div>
 
-        <div id="field-location" class="field sector-field" data-sectors="emergency">
-          <label for="location">Location</label>
-          <input type="text" id="location" name="location" placeholder="Street, area, landmark">
-        </div>
+          <div id="field-policy_number" class="field sector-field" data-sectors="hmo_claims">
+            <label for="policy_number">Policy Number</label>
+            <input type="text" id="policy_number" name="policy_number" placeholder="HMO-2024-001">
+          </div>
 
-        <div id="field-emergency_type" class="field sector-field" data-sectors="emergency">
-          <label for="emergency_type">Emergency Type</label>
-          <select id="emergency_type" name="emergency_type">
-            <option value="medical">Medical</option>
-            <option value="fire">Fire</option>
-            <option value="road accident">Road Accident</option>
-            <option value="cardiac arrest">Cardiac Arrest</option>
-            <option value="flood">Flood</option>
-            <option value="gas leak">Gas Leak</option>
-          </select>
-        </div>
+          <div id="field-provider_name" class="field sector-field" data-sectors="hmo_claims">
+            <label for="provider_name">Provider Name</label>
+            <input type="text" id="provider_name" name="provider_name" placeholder="Hospital or clinic name">
+          </div>
 
-        <button type="submit" class="submit-btn" id="submitBtn">
-          <span id="submitLabel">Submit Case</span>
-        </button>
+          <div id="field-location" class="field sector-field" data-sectors="emergency">
+            <label for="location">Location</label>
+            <input type="text" id="location" name="location" placeholder="Street, area, landmark">
+          </div>
+
+          <div id="field-emergency_type" class="field sector-field" data-sectors="emergency">
+            <label for="emergency_type">Emergency Type</label>
+            <select id="emergency_type" name="emergency_type">
+              <option value="medical">Medical</option>
+              <option value="fire">Fire</option>
+              <option value="road accident">Road Accident</option>
+              <option value="cardiac arrest">Cardiac Arrest</option>
+              <option value="flood">Flood</option>
+              <option value="gas leak">Gas Leak</option>
+            </select>
+          </div>
+
+          <div class="step-nav">
+            <button type="button" class="step-btn secondary" id="step3Back">← Back</button>
+          </div>
+
+          <button type="submit" class="submit-btn" id="submitBtn">
+            <span id="submitLabel">Submit Case</span>
+          </button>
+        </div>
       </form>
 
       <div id="liveAgents">
@@ -812,10 +1049,25 @@
     const submitBtn = document.getElementById('submitBtn');
     const submitLabel = document.getElementById('submitLabel');
     const sectorGrid = document.getElementById('sectorGrid');
+    const institutionGrid = document.getElementById('institutionGrid');
+    const institutionHeading = document.getElementById('institutionHeading');
+    const institutionIdInput = document.getElementById('institution_id');
+    const step2Next = document.getElementById('step2Next');
+
+    let currentStep = 1;
+    let selectedInstitutionId = null;
+    let institutionsFetchToken = 0;
 
     function getSelectedSector() {
       const checked = form.querySelector('input[name="sector"]:checked');
       return checked ? checked.value : 'pharmacy';
+    }
+
+    function showStep(step) {
+      currentStep = step;
+      document.querySelectorAll('.step').forEach(el => {
+        el.classList.toggle('active', el.id === 'step-' + step);
+      });
     }
 
     function setSelectedSector(sector) {
@@ -827,12 +1079,27 @@
       });
     }
 
+    function clearInstitutionSelection() {
+      selectedInstitutionId = null;
+      institutionIdInput.value = '';
+      step2Next.disabled = true;
+      institutionGrid.querySelectorAll('.institution-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+    }
+
+    function updateInstitutionHeading(sector) {
+      const meta = SECTORS[sector] || SECTORS.pharmacy;
+      institutionHeading.textContent = 'Select a ' + meta.label + ' provider';
+    }
+
     function applySectorTheme(sector) {
       const meta = SECTORS[sector] || SECTORS.pharmacy;
       document.getElementById('sectorIcon').textContent = meta.icon;
       document.getElementById('sectorLabel').textContent = meta.label;
       document.getElementById('sectorRole').textContent = 'Human approver: ' + meta.role;
       document.getElementById('sectorNote').style.display = sector === 'pharmacy' ? 'block' : 'none';
+      updateInstitutionHeading(sector);
     }
 
     function updateSectorFields(sector) {
@@ -868,25 +1135,131 @@
       }
     }
 
+    function onSectorChange(sector) {
+      setSelectedSector(sector);
+      applySectorTheme(sector);
+      updateSectorFields(sector);
+      clearInstitutionSelection();
+      fetchInstitutions(sector);
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function renderInstitutionCard(inst) {
+      const plan = (inst.plan || 'professional').toLowerCase();
+      const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
+      const specialties = (inst.specialties || []).map(s =>
+        '<span class="specialty-pill">' + escapeHtml(s) + '</span>'
+      ).join('');
+
+      return (
+        '<button type="button" class="institution-card" data-id="' + escapeHtml(inst.id) + '">' +
+          '<span class="institution-check">✓</span>' +
+          '<div class="institution-logo" style="background:' + escapeHtml(inst.logo_color || '#0E7C7B') + '">' +
+            escapeHtml(inst.logo_initial || inst.name.charAt(0)) +
+          '</div>' +
+          '<div class="institution-name">' + escapeHtml(inst.name) + '</div>' +
+          '<div class="institution-location">' + escapeHtml(inst.location || '') + '</div>' +
+          '<div class="institution-meta">' +
+            '<span class="institution-rating">★ ' + (inst.rating != null ? inst.rating : '—') + '</span>' +
+            '<span class="institution-turnaround">' + escapeHtml(inst.turnaround || '') + '</span>' +
+          '</div>' +
+          (specialties ? '<div class="institution-specialties">' + specialties + '</div>' : '') +
+          '<span class="plan-badge ' + escapeHtml(plan) + '">' + escapeHtml(planLabel) + '</span>' +
+        '</button>'
+      );
+    }
+
+    function bindInstitutionCards() {
+      institutionGrid.querySelectorAll('.institution-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const id = card.dataset.id;
+          selectedInstitutionId = id;
+          institutionIdInput.value = id;
+          institutionGrid.querySelectorAll('.institution-card').forEach(c => {
+            c.classList.toggle('selected', c.dataset.id === id);
+          });
+          step2Next.disabled = false;
+        });
+      });
+    }
+
+    async function fetchInstitutions(sector) {
+      const token = ++institutionsFetchToken;
+      institutionGrid.innerHTML = '<div class="institution-loading">Loading providers…</div>';
+
+      try {
+        const response = await fetch('/api/institutions/' + encodeURIComponent(sector));
+        if (!response.ok) throw new Error('Failed to load providers');
+        const institutions = await response.json();
+        if (token !== institutionsFetchToken) return;
+
+        if (!institutions.length) {
+          institutionGrid.innerHTML = '<div class="institution-empty">No providers available for this sector yet.</div>';
+          return;
+        }
+
+        institutionGrid.innerHTML = institutions.map(renderInstitutionCard).join('');
+        bindInstitutionCards();
+
+        if (selectedInstitutionId) {
+          const match = institutionGrid.querySelector('[data-id="' + selectedInstitutionId + '"]');
+          if (match) {
+            match.classList.add('selected');
+            step2Next.disabled = false;
+          } else {
+            clearInstitutionSelection();
+          }
+        }
+      } catch (err) {
+        if (token !== institutionsFetchToken) return;
+        institutionGrid.innerHTML = '<div class="institution-error">' + escapeHtml(err.message) + '</div>';
+      }
+    }
+
+    function selectFirstInstitution() {
+      const first = institutionGrid.querySelector('.institution-card');
+      if (first) first.click();
+    }
+
     sectorGrid.querySelectorAll('.sector-card').forEach(card => {
       card.addEventListener('click', () => {
-        const sector = card.dataset.sector;
-        setSelectedSector(sector);
-        applySectorTheme(sector);
-        updateSectorFields(sector);
+        onSectorChange(card.dataset.sector);
       });
+    });
+
+    document.getElementById('step1Next').addEventListener('click', () => {
+      const sector = getSelectedSector();
+      updateInstitutionHeading(sector);
+      fetchInstitutions(sector);
+      showStep(2);
+    });
+
+    document.getElementById('step2Back').addEventListener('click', () => {
+      showStep(1);
+    });
+
+    document.getElementById('step2Next').addEventListener('click', () => {
+      if (!selectedInstitutionId) return;
+      showStep(3);
+    });
+
+    document.getElementById('step3Back').addEventListener('click', () => {
+      showStep(2);
     });
 
     applySectorTheme(getSelectedSector());
     updateSectorFields(getSelectedSector());
 
     document.querySelectorAll('.demo-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const demo = DEMOS[btn.dataset.demo];
         if (!demo) return;
-        setSelectedSector(demo.sector);
-        applySectorTheme(demo.sector);
-        updateSectorFields(demo.sector);
+        onSectorChange(demo.sector);
         document.getElementById('name').value = demo.name || '';
         document.getElementById('issue').value = demo.issue || '';
         document.getElementById('service').value = demo.service || '';
@@ -897,6 +1270,10 @@
         if (demo.location) document.getElementById('location').value = demo.location;
         if (demo.emergency_type) document.getElementById('emergency_type').value = demo.emergency_type;
         document.getElementById('self_harm_flag').checked = !!demo.self_harm_flag;
+
+        await fetchInstitutions(demo.sector);
+        selectFirstInstitution();
+        showStep(3);
       });
     });
 

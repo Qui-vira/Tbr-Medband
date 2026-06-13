@@ -2,6 +2,8 @@
 import json
 import os
 import sys
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -13,16 +15,15 @@ sys.path.insert(0, str(ROOT))
 load_dotenv(ROOT / ".env")
 
 from core.reports import build_patient_report
-from core.sector_loader import SECTOR_META, sector_meta, set_sector
+from core.sector_loader import SECTOR_META, get_active_sector, human_role, load_institutions, sector_meta, set_active_sector
 from core.workflow import load_case, run_case, run_case_stream
 
 app = Flask(__name__, template_folder=".")
 
 
 def _form_raw(data) -> tuple[str, str]:
-    sector = data.get("sector", os.getenv("ACTIVE_SECTOR", "pharmacy"))
-    set_sector(sector)
-    os.environ["ACTIVE_SECTOR"] = sector
+    sector = data.get("sector", "pharmacy")
+    set_active_sector(sector)
 
     lines = [f"Sector: {sector}"]
 
@@ -113,8 +114,9 @@ def api_case(case_id):
 @app.route("/submit", methods=["POST"])
 def submit():
     raw, sector = _form_raw(request.form)
+    institution_id = request.form.get("institution_id") or None
     try:
-        result = run_case(raw, sector=sector)
+        result = run_case(raw, sector=sector, institution_id=institution_id)
         result["patient_report"] = build_patient_report(result)
         return jsonify(result)
     except Exception as exc:
@@ -124,10 +126,11 @@ def submit():
 @app.route("/submit/stream", methods=["POST"])
 def submit_stream():
     raw, sector = _form_raw(request.form)
+    institution_id = request.form.get("institution_id") or None
 
     def generate():
         try:
-            for event in run_case_stream(raw, sector=sector):
+            for event in run_case_stream(raw, sector=sector, institution_id=institution_id):
                 yield json.dumps(event) + "\n"
         except Exception as exc:
             yield json.dumps({"type": "error", "error": str(exc)}) + "\n"
@@ -142,6 +145,49 @@ def lookup(case_id):
         return jsonify({"error": "Case not found"}), 404
     report = build_patient_report(case)
     return jsonify({"case": case, "report": report, "sector": sector_meta(case.get("sector"))})
+
+
+@app.route("/register")
+def register():
+    return render_template("register.html")
+
+
+@app.route("/api/institutions/<sector>")
+def get_institutions(sector):
+    return jsonify(load_institutions(sector))
+
+
+@app.route("/api/register", methods=["POST"])
+def register_institution():
+    data = request.get_json(silent=True) or {}
+    data["timestamp"] = datetime.now(timezone.utc).isoformat()
+    data["status"] = "pending"
+    data["id"] = str(uuid.uuid4())[:8].upper()
+
+    reg_path = ROOT / "data" / "registrations.json"
+    registrations = []
+    if reg_path.exists():
+        with open(reg_path, encoding="utf-8") as f:
+            registrations = json.load(f)
+    registrations.append(data)
+    reg_path.parent.mkdir(exist_ok=True)
+    with open(reg_path, "w", encoding="utf-8") as f:
+        json.dump(registrations, f, indent=2)
+
+    return jsonify({
+        "success": True,
+        "message": "Registration received",
+        "id": data["id"],
+    })
+
+
+@app.route("/api/admin/registrations")
+def view_registrations():
+    reg_path = ROOT / "data" / "registrations.json"
+    if reg_path.exists():
+        with open(reg_path, encoding="utf-8") as f:
+            return jsonify(json.load(f))
+    return jsonify([])
 
 
 @app.route("/landing")

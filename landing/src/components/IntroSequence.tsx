@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { ASSETS } from "@/lib/constants";
 import { EASE } from "@/lib/constants";
+import { LogoMark } from "./LogoMark";
 
 const RAY_ANGLES = [0, 30, 60, 120, 150, 210, 240, 300, 330];
 const TOTAL_MS = 3600;
@@ -13,19 +13,9 @@ function rayPath(angleDeg: number, length = 60) {
   return `M 50 50 L ${x2} ${y2}`;
 }
 
-function LogoFallback({ className }: { className?: string }) {
-  return (
-    <span className={`font-display font-black text-2xl ${className ?? ""}`}>
-      <span className="text-teal">Med</span>
-      <span className="text-[oklch(0.13_0.03_240)]">Band</span>
-    </span>
-  );
-}
-
 export function IntroSequence() {
   const reduced = useReducedMotion();
   const [hidden, setHidden] = useState(false);
-  const [logoFailed, setLogoFailed] = useState(false);
   const duration = reduced ? 0.1 : TOTAL_MS / 1000;
 
   useEffect(() => {
@@ -132,7 +122,7 @@ export function IntroSequence() {
           />
 
           <motion.div
-            className="overflow-hidden"
+            className="overflow-hidden flex items-center"
             initial={{ width: 64, opacity: 0 }}
             animate={{
               width: reduced ? 268 : [64, 64, 64, 268, 268],
@@ -145,17 +135,7 @@ export function IntroSequence() {
             }}
             style={{ height: 64 }}
           >
-            {logoFailed ? (
-              <LogoFallback />
-            ) : (
-              <img
-                src={ASSETS.logo}
-                alt=""
-                className="h-16 max-w-none"
-                style={{ width: 268, height: 64 }}
-                onError={() => setLogoFailed(true)}
-              />
-            )}
+            <LogoMark style={{ fontSize: "3rem", lineHeight: "64px" }} />
           </motion.div>
         </motion.div>
       </div>

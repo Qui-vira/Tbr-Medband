@@ -14,6 +14,7 @@ Always scan all input for mentions of harm to self or others (suicide, self-harm
 If ANY such mention exists, set self_harm_flag to **true** regardless of other fields.
 
 ## Output Format (JSON only)
+Pass through `institution_id` and `institution_name` from the case payload when provided (use empty string if absent).
 ```json
 {
   "status": "INTAKE_COMPLETE",
@@ -21,7 +22,9 @@ If ANY such mention exists, set self_harm_flag to **true** regardless of other f
   "requested_service": "",
   "presenting_concern": "",
   "duration": "",
-  "self_harm_flag": false
+  "self_harm_flag": false,
+  "institution_id": "",
+  "institution_name": ""
 }
 ```
 Set requested_service to a brief summary of presenting_concern.

@@ -14,6 +14,7 @@ Use empty strings for missing optional fields.
 - additional_details: any extra context
 
 ## Output Format (JSON only)
+Pass through `institution_id` and `institution_name` from the case payload when provided (use empty string if absent).
 ```json
 {
   "status": "INTAKE_COMPLETE",
@@ -22,7 +23,9 @@ Use empty strings for missing optional fields.
   "caller_name": "",
   "emergency_type": "",
   "location": "",
-  "additional_details": ""
+  "additional_details": "",
+  "institution_id": "",
+  "institution_name": ""
 }
 ```
 Set requester_name to caller_name. Set requested_service to emergency_type.

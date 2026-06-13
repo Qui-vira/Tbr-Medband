@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { IntroSequence } from "./IntroSequence";
 import { LineField } from "./LineField";
+import { LogoMark } from "./LogoMark";
 import { StarField } from "./StarField";
 import { ASSETS, EASE, INTRO_DELAY, LINKS, MATTE } from "@/lib/constants";
 import { blurIn, photoIn, viewBlurIn, viewFadeUp } from "@/lib/motion";
@@ -80,24 +81,8 @@ function SafeImage({
   );
 }
 
-function Logo({ className = "h-6 w-auto" }: { className?: string }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) {
-    return (
-      <span className={`font-display font-black ${className}`}>
-        <span className="text-teal">Med</span>
-        <span className="text-[oklch(0.13_0.03_240)]">Band</span>
-      </span>
-    );
-  }
-  return (
-    <img
-      src={ASSETS.logo}
-      alt="MedBand"
-      className={className}
-      onError={() => setFailed(true)}
-    />
-  );
+function Logo() {
+  return <LogoMark style={{ fontSize: "1.25rem", lineHeight: 1.2 }} />;
 }
 
 function NoiseOverlay() {
@@ -190,6 +175,14 @@ function TopBar() {
           transition={{ duration: 0.4, delay: INTRO_DELAY, ease: EASE }}
         >
           <a
+            href={LINKS.register}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex rounded-full border border-teal/40 text-teal px-3 py-1 text-sm hover:bg-teal/10 transition"
+          >
+            For Institutions
+          </a>
+          <a
             href={LINKS.live}
             target="_blank"
             rel="noopener noreferrer"
@@ -210,6 +203,16 @@ function TopBar() {
 
       {open && (
         <div className="md:hidden mt-4 rounded-xl border border-white/10 bg-black/80 backdrop-blur-md overflow-hidden">
+          <a
+            href={LINKS.register}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center justify-between px-4 py-3 text-sm text-teal hover:bg-teal/10 transition"
+            onClick={() => setOpen(false)}
+          >
+            For Institutions
+            <ArrowUpRight className="w-4 h-4 opacity-40 group-hover:opacity-100 transition" />
+          </a>
           <a
             href={LINKS.live}
             target="_blank"
@@ -757,6 +760,235 @@ function SixSectors() {
   );
 }
 
+const FEATURED_INSTITUTIONS = [
+  {
+    id: "PHM001",
+    name: "Ladibe Pharmacy",
+    location: "Victoria Island, Lagos",
+    sector: "Pharmacy",
+    logo_initial: "L",
+    logo_color: "#0E7C7B",
+    rating: 4.8,
+    cases_processed: 1240,
+    plan: "enterprise",
+    turnaround: "5-10 mins",
+  },
+  {
+    id: "HSP001",
+    name: "Reddington Hospital",
+    location: "Victoria Island, Lagos",
+    sector: "Hospital Triage",
+    logo_initial: "R",
+    logo_color: "#E53E3E",
+    rating: 4.9,
+    cases_processed: 3400,
+    plan: "enterprise",
+    turnaround: "2-5 mins",
+  },
+  {
+    id: "LAB001",
+    name: "Synlab Nigeria",
+    location: "Victoria Island, Lagos",
+    sector: "Lab/Diagnostics",
+    logo_initial: "S",
+    logo_color: "#0E7C7B",
+    rating: 4.8,
+    cases_processed: 1890,
+    plan: "enterprise",
+    turnaround: "2-24 hrs",
+  },
+  {
+    id: "MH001",
+    name: "Emeka Eze Wellness Centre",
+    location: "Ikoyi, Lagos",
+    sector: "Mental Health",
+    logo_initial: "E",
+    logo_color: "#553C9A",
+    rating: 4.9,
+    cases_processed: 340,
+    plan: "enterprise",
+    turnaround: "Same day",
+  },
+  {
+    id: "HMO001",
+    name: "Hygeia HMO",
+    location: "Victoria Island, Lagos",
+    sector: "HMO/Insurance",
+    logo_initial: "H",
+    logo_color: "#0E7C7B",
+    rating: 4.6,
+    cases_processed: 4500,
+    plan: "enterprise",
+    turnaround: "1-3 days",
+  },
+  {
+    id: "EMG001",
+    name: "LASAMBUS",
+    location: "Lagos State",
+    sector: "Emergency",
+    logo_initial: "L",
+    logo_color: "#E53E3E",
+    rating: 4.5,
+    cases_processed: 8900,
+    plan: "enterprise",
+    turnaround: "8-15 mins",
+  },
+] as const;
+
+function TrustedInstitutions() {
+  return (
+    <section
+      id="institutions"
+      className={`${MATTE} relative px-6 md:px-12 py-32 overflow-hidden`}
+    >
+      <StarField count={500} />
+      <LineField variant="photographer" />
+      <NoiseOverlay />
+      <div
+        className="absolute -right-20 top-1/3 w-[500px] h-[500px] rounded-full bg-teal/[0.03] blur-3xl pointer-events-none"
+        style={{ zIndex: 1 }}
+      />
+
+      <div className="relative z-[2] max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 mb-20">
+        <motion.h2
+          className="font-display font-black text-5xl md:text-6xl uppercase leading-[0.95]"
+          variants={viewBlurIn}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+        >
+          Institutions Already
+          <br />
+          On MedBand
+        </motion.h2>
+        <motion.p
+          className="text-white/55 text-[15px] max-w-md leading-relaxed self-end"
+          variants={viewBlurIn}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+        >
+          Healthcare institutions across six sectors are already routing cases
+          through MedBand. Join the network and connect your workflow to the
+          multi-agent engine.
+        </motion.p>
+      </div>
+
+      <div className="relative z-[2] max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+        {FEATURED_INSTITUTIONS.map((inst, i) => (
+          <motion.div
+            key={inst.id}
+            className="rounded-2xl p-6 border border-white/10 bg-[oklch(0.11_0.006_220)] hover:border-teal/40 hover:bg-[oklch(0.13_0.008_220)] transition-all duration-300"
+            initial={{ opacity: 0, y: 40, filter: "blur(12px)" }}
+            whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 1.1, delay: i * 0.08, ease: EASE }}
+          >
+            <div className="flex items-start gap-4">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center font-display font-bold text-lg text-white shrink-0"
+                style={{ backgroundColor: inst.logo_color }}
+              >
+                {inst.logo_initial}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-display font-bold text-lg text-white truncate">
+                  {inst.name}
+                </h3>
+                <p className="text-white/50 text-sm mt-0.5">{inst.location}</p>
+              </div>
+            </div>
+
+            <span className="mt-4 inline-flex rounded-full border border-teal/20 px-2 py-0.5 text-xs text-teal/80 bg-teal/5">
+              {inst.sector}
+            </span>
+
+            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-lg bg-white/[0.03] px-2 py-2">
+                <div className="font-display font-bold text-teal text-sm">
+                  {inst.rating}
+                </div>
+                <div className="text-white/40 text-[10px] mt-0.5">Rating</div>
+              </div>
+              <div className="rounded-lg bg-white/[0.03] px-2 py-2">
+                <div className="font-display font-bold text-teal text-sm">
+                  {inst.cases_processed.toLocaleString()}
+                </div>
+                <div className="text-white/40 text-[10px] mt-0.5">Cases</div>
+              </div>
+              <div className="rounded-lg bg-white/[0.03] px-2 py-2">
+                <div className="font-display font-bold text-teal text-xs leading-tight">
+                  {inst.turnaround}
+                </div>
+                <div className="text-white/40 text-[10px] mt-0.5">Turnaround</div>
+              </div>
+            </div>
+
+            <span
+              className={`mt-4 inline-flex rounded-full px-2 py-0.5 text-xs capitalize ${
+                inst.plan === "enterprise"
+                  ? "bg-teal/20 border border-teal/30 text-teal"
+                  : "bg-white/10 border border-white/20 text-white/70"
+              }`}
+            >
+              {inst.plan}
+            </span>
+          </motion.div>
+        ))}
+      </div>
+
+      <motion.div
+        className="relative z-[2] max-w-7xl mx-auto mt-16 text-center"
+        variants={viewFadeUp}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, margin: "-100px" }}
+      >
+        <a
+          href={LINKS.register}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-full bg-teal text-white px-8 py-3 font-medium hover:bg-teal/80 transition"
+        >
+          Register Your Institution
+          <ArrowUpRight className="w-4 h-4" />
+        </a>
+      </motion.div>
+    </section>
+  );
+}
+
+function MobileFloatingCTA() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > window.innerHeight * 0.85);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pointer-events-none">
+      <div className="pointer-events-auto flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/90 backdrop-blur-md px-4 py-3 shadow-[0_-8px_40px_-12px_rgba(0,0,0,0.8)]">
+        <p className="text-sm text-white/80 leading-snug">
+          Is your institution on MedBand?
+        </p>
+        <a
+          href={LINKS.register}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 rounded-full bg-teal text-white px-4 py-2 text-sm font-medium hover:bg-teal/80 transition"
+        >
+          Register Now
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function BandIntegration() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -924,6 +1156,8 @@ function Footer() {
           {[
             { label: "GitHub", href: LINKS.github },
             { label: "Live Demo", href: LINKS.live },
+            { label: "Register Institution", href: LINKS.register },
+            { label: "Pricing", href: `${LINKS.register}#pricing` },
             { label: "Hackathon", href: LINKS.github },
           ].map((link) => (
             <a
@@ -941,7 +1175,9 @@ function Footer() {
 
       <div className="mt-8 pt-8 border-t border-white/10 grid grid-cols-1 md:grid-cols-3 gap-8">
         <div>
-          <p className="font-display font-bold text-white mb-2">MedBand</p>
+          <p className="font-display font-bold mb-2">
+            <LogoMark style={{ fontSize: "1rem", lineHeight: 1.2 }} />
+          </p>
           <p className="text-white/40 text-sm leading-relaxed">
             A sector-configurable multi-agent healthcare workflow engine. Built
             for Band of Agents Hackathon 2026.
@@ -988,10 +1224,12 @@ export function MedBandLanding() {
     <>
       <IntroSequence />
       <TopBar />
+      <MobileFloatingCTA />
       <main>
         <HeroSection />
         <HowItWorks />
         <SixSectors />
+        <TrustedInstitutions />
         <BandIntegration />
       </main>
       <Footer />

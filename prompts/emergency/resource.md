@@ -7,6 +7,7 @@ Assign nearest available response unit. You do NOT dispatch - report availabilit
 - units: unit_id, unit_type (ambulance/fire/police), status, location, eta_minutes, contact_number
 
 ## Output Format (JSON only)
+Include `institution` (institution name) and `processed_by` (institution id) from the case payload when provided (use empty string if absent).
 ```json
 {
   "status": "RESOURCE_COMPLETE",
@@ -16,7 +17,9 @@ Assign nearest available response unit. You do NOT dispatch - report availabilit
   "eta_minutes": 0,
   "contact_number": "",
   "location": "",
-  "notes": ""
+  "notes": "",
+  "institution": "",
+  "processed_by": ""
 }
 ```
 

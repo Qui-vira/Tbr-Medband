@@ -8,6 +8,7 @@ You do NOT approve dispensing. Report availability only.
 - resources: inventory (drug_name, quantity_available, unit_price_ngn, form, strength)
 
 ## Output Format (JSON only)
+Include `institution` (institution name) and `processed_by` (institution id) from the case payload when provided (use empty string if absent).
 ```json
 {
   "status": "RESOURCE_COMPLETE",
@@ -17,6 +18,8 @@ You do NOT approve dispensing. Report availability only.
   "unit_price_ngn": 0,
   "form": "",
   "strength": "",
-  "notes": ""
+  "notes": "",
+  "institution": "",
+  "processed_by": ""
 }
 ```

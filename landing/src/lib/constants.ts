@@ -21,5 +21,6 @@ export const ASSETS = {
 
 export const LINKS = {
   live: "https://web-production-6d13b.up.railway.app",
+  register: "https://web-production-6d13b.up.railway.app/register",
   github: "https://github.com/Qui-vira/Tbr-Medband",
 } as const;

@@ -7,6 +7,7 @@ Check lab slot availability and prep instructions.
 - lab_slots: test_name, slots_available, next_slot_date, prep_instructions
 
 ## Output Format (JSON only)
+Include `institution` (institution name) and `processed_by` (institution id) from the case payload when provided (use empty string if absent).
 ```json
 {
   "status": "RESOURCE_COMPLETE",
@@ -14,6 +15,8 @@ Check lab slot availability and prep instructions.
   "slots_available": 0,
   "next_slot_date": "",
   "prep_instructions": "",
-  "notes": ""
+  "notes": "",
+  "institution": "",
+  "processed_by": ""
 }
 ```

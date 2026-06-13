@@ -14,6 +14,7 @@ You do NOT prescribe, approve, or make clinical judgements.
 - prescription_code: doctor prescription code if provided (format TBR-DOC-XXXX, e.g. TBR-DOC-0042). Extract from patient input or form data. Use empty string "" if not provided.
 
 ## Output Format (JSON only, no markdown)
+Pass through `institution_id` and `institution_name` from the case payload when provided (use empty string if absent).
 ```json
 {
   "status": "INTAKE_COMPLETE",
@@ -21,7 +22,9 @@ You do NOT prescribe, approve, or make clinical judgements.
   "requested_service": "",
   "presenting_issue": "",
   "urgency": "low|medium|high",
-  "prescription_code": ""
+  "prescription_code": "",
+  "institution_id": "",
+  "institution_name": ""
 }
 ```
 
