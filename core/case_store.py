@@ -172,10 +172,14 @@ def init_store() -> None:
     with _lock:
         if DATABASE_URL:
             _get_pg_connection()
-            logger.info("Case store initialized: PostgreSQL")
+            message = "Case store initialized: PostgreSQL"
+            logger.info(message)
+            print(message, flush=True)
         else:
             _ensure_sqlite()
-            logger.info("Case store initialized: SQLite at %s", SQLITE_PATH)
+            message = f"Case store initialized: SQLite at {SQLITE_PATH}"
+            logger.info(message)
+            print(message, flush=True)
 
 
 def make_idempotency_key(

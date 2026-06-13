@@ -267,7 +267,9 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
         init_case_state()
 
     def _log_ignoring_room(self, room_id: str) -> None:
-        logger.info("Ignoring room due to Band message limit: %s", room_id)
+        message = f"Ignoring room due to Band message limit: {room_id}"
+        logger.info(message)
+        print(message, flush=True)
 
     def _handle_band_limit(self, room_id: str, exc: BaseException) -> bool:
         if disable_room_for_band_limit(room_id, exc):

@@ -158,6 +158,9 @@ def create_band_agent(agent_name: str, prompt: str) -> Agent:
 
 async def run_band_agent(agent_name: str, prompt: str, connected_message: str):
 
+    from core.case_state import init_case_state
+
+    init_case_state()
     agent = create_band_agent(agent_name, prompt)
 
     print(connected_message)
