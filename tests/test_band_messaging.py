@@ -13,7 +13,7 @@ from core.band_messaging import (
     should_skip_inbound,
     strip_em_dash,
 )
-from core.case_state import init_case_state, record_stage, try_claim_outbound
+from core.case_state import init_case_state, record_stage
 
 
 @pytest.fixture(autouse=True)
@@ -63,6 +63,8 @@ def test_format_case_opened():
 
 
 def test_duplicate_stage_blocked():
+    from core.case_state import try_claim_outbound
+
     case_id = "TEST1234"
     assert try_claim_outbound(case_id, "CASE_OPENED", "coordinator", "room")
     raw = json.dumps({"status": "CASE_OPENED", "case_id": case_id})
@@ -111,3 +113,37 @@ def test_extract_recipient_from_mentions():
         {"content": "verify this", "mentions": ["@medlabbytbr/verification"]}
     )
     assert recipient == "verification"
+
+
+def test_coordinator_processes_intake_complete_after_intake_recorded():
+    case_id = "MB-TEST001"
+    record_stage(
+        case_id,
+        "INTAKE_COMPLETE",
+        payload={
+            "status": "INTAKE_COMPLETE",
+            "case_id": case_id,
+            "requester_name": "Ada Okonkwo",
+            "requested_service": "Amoxicillin 500mg",
+        },
+    )
+    msg = _msg("📋 INTAKE COMPLETE\n\nPatient: Ada Okonkwo", sender="Intake")
+    skip, reason = should_skip_inbound("coordinator", msg, case_id=case_id)
+    assert skip is False
+
+
+def test_coordinator_skips_intake_complete_after_verify_request():
+    case_id = "MB-TEST002"
+    record_stage(case_id, "INTAKE_COMPLETE", payload={"case_id": case_id})
+    record_stage(case_id, "VERIFY_REQUEST", payload={"case_id": case_id})
+    msg = _msg("📋 INTAKE COMPLETE\n\nPatient: Ada", sender="Intake")
+    skip, reason = should_skip_inbound("coordinator", msg, case_id=case_id)
+    assert skip is True
+    assert reason == "duplicate_stage"
+
+
+def test_intake_complete_includes_case_id():
+    text = format_case_opened(
+        {"case_id": "MB-ABC12345", "requester_name": "Ada", "requested_service": "Amox"}
+    )
+    assert "Case ID: MB-ABC12345" in text

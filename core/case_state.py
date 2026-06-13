@@ -189,3 +189,41 @@ def detect_stage(text: str, payload: dict[str, Any] | None = None) -> str | None
     if "@MEDLABBYTBR/RESOURCE" in upper and ("RESOURCE" in upper or "AVAILABILITY" in upper):
         return "RESOURCE_REQUEST"
     return None
+
+
+def build_coordinator_workflow_context(case_id: str) -> str:
+    """Structured workflow state from Postgres for Coordinator routing."""
+    state = get_case_state(case_id)
+    completed = sorted(state.get("completed_stages", []))
+    lines = [
+        "[System]: Postgres workflow state (use this for routing, not visible Band text alone)",
+        f"case_id: {case_id}",
+        f"completed_stages: {', '.join(completed) if completed else 'none'}",
+    ]
+    intake = state.get("intake")
+    if isinstance(intake, dict) and intake:
+        lines.append(f"intake_result: {json.dumps(intake, default=str)}")
+    verification = state.get("verification")
+    if isinstance(verification, dict) and verification:
+        lines.append(f"verification_result: {json.dumps(verification, default=str)}")
+    resource = state.get("resource")
+    if isinstance(resource, dict) and resource:
+        lines.append(f"resource_result: {json.dumps(resource, default=str)}")
+
+    if stage_completed(case_id, "INTAKE_COMPLETE") and not stage_completed(case_id, "VERIFY_REQUEST"):
+        lines.append(
+            "required_action: INTAKE_COMPLETE received. Send exactly one VERIFY_REQUEST to @medlabbytbr/verification with intake_result."
+        )
+    elif stage_completed(case_id, "CASE_CLEAR") or stage_completed(case_id, "CASE_CAUTION"):
+        if not stage_completed(case_id, "RESOURCE_REQUEST"):
+            lines.append(
+                "required_action: Verification passed. Send exactly one RESOURCE_REQUEST to @medlabbytbr/resource."
+            )
+    elif stage_completed(case_id, "CASE_ESCALATE"):
+        if not stage_completed(case_id, "HUMAN_ALERT"):
+            lines.append("required_action: Verification escalated. Send HUMAN_ALERT and stop.")
+    elif stage_completed(case_id, "RESOURCE_COMPLETE") and not stage_completed(case_id, "CASE_READY"):
+        lines.append(
+            "required_action: Resource complete. Post exactly one CASE READY FOR HUMAN REVIEW summary."
+        )
+    return "\n".join(lines)

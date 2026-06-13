@@ -48,6 +48,15 @@ AGENT_REPLY_STAGES = frozenset(
     }
 )
 
+# Coordinator should skip only after it has already performed the next routing step.
+COORDINATOR_NEXT_STAGE: dict[str, str] = {
+    "INTAKE_COMPLETE": "VERIFY_REQUEST",
+    "CASE_CLEAR": "RESOURCE_REQUEST",
+    "CASE_CAUTION": "RESOURCE_REQUEST",
+    "CASE_ESCALATE": "HUMAN_ALERT",
+    "RESOURCE_COMPLETE": "CASE_READY",
+}
+
 
 @dataclass
 class OutboundDecision:
@@ -99,6 +108,13 @@ def _pick(data: dict[str, Any], *keys: str, default: str = "") -> str:
     return default
 
 
+def _case_id_lines(payload: dict[str, Any]) -> list[str]:
+    case_id = _pick(payload, "case_id")
+    if not case_id:
+        return []
+    return [f"Case ID: {case_id}", ""]
+
+
 def format_case_opened(payload: dict[str, Any]) -> str:
     intake = payload.get("intake") if isinstance(payload.get("intake"), dict) else {}
     patient = _pick(payload, "requester_name", "patient_name") or _pick(intake, "requester_name", "patient_name")
@@ -111,6 +127,7 @@ def format_case_opened(payload: dict[str, Any]) -> str:
     lines = [
         "📋 CASE OPENED",
         "",
+        *_case_id_lines(payload),
         f"Patient: {patient or 'Unknown'}",
         f"Institution: {institution}",
         f"Request: {request or 'Not specified'}",
@@ -138,6 +155,7 @@ def format_intake_complete(payload: dict[str, Any]) -> str:
     lines = [
         "📋 INTAKE COMPLETE",
         "",
+        *_case_id_lines(payload),
         f"Patient: {patient or 'Unknown'}",
         f"Request: {request or 'Not specified'}",
         f"Issue: {issue or 'Not specified'}",
@@ -165,6 +183,7 @@ def format_verification(payload: dict[str, Any]) -> str:
                 [
                     "🚨 VERIFICATION ESCALATION",
                     "",
+                    *_case_id_lines(payload),
                     f"Request: {drug or 'Unknown'}",
                     f"Reason: {reason or 'Safety review required.'}",
                     "",
@@ -179,6 +198,7 @@ def format_verification(payload: dict[str, Any]) -> str:
                 [
                     "🟡 VERIFICATION CAUTION",
                     "",
+                    *_case_id_lines(payload),
                     f"Request: {drug or 'Unknown'}",
                     f"Notes: {reason or 'Proceed with caution.'}",
                     "",
@@ -195,6 +215,7 @@ def format_verification(payload: dict[str, Any]) -> str:
             [
                 "✅ VERIFICATION COMPLETE",
                 "",
+                *_case_id_lines(payload),
                 "Verification:",
                 clear_line,
                 "No safety concern was found.",
@@ -212,7 +233,7 @@ def format_resource_complete(payload: dict[str, Any]) -> str:
     in_stock = payload.get("in_stock", True)
     qty = payload.get("quantity_available")
     notes = _pick(payload, "notes")
-    lines = ["📦 RESOURCE COMPLETE", ""]
+    lines = ["📦 RESOURCE COMPLETE", "", *_case_id_lines(payload)]
     lines.append(f"Request: {name or 'Unknown'}")
     if institution:
         lines.append(f"Institution: {institution}")
@@ -269,6 +290,8 @@ def format_case_ready(payload: dict[str, Any], case_id: str) -> str:
         "\n".join(
             [
                 "📋 CASE READY FOR HUMAN REVIEW",
+                "",
+                f"Case ID: {case_id}",
                 "",
                 "Patient:",
                 patient or "Unknown",
@@ -446,19 +469,16 @@ def should_skip_inbound(
     elif agent_role == "coordinator":
         payload = try_parse_json_payload(msg.content or "")
         incoming_stage = detect_stage(msg.content or "", payload)
-        if (
-            case_id
-            and incoming_stage
-            and incoming_stage in AGENT_REPLY_STAGES
-            and stage_completed(case_id, incoming_stage)
-            and not is_self_sender(sender, agent_role)
-        ):
-            logger.info(
-                "SKIP inbound: duplicate_stage agent=coordinator incoming=%s case_id=%s",
-                incoming_stage,
-                case_id,
-            )
-            return True, "duplicate_stage"
+        if case_id and incoming_stage in AGENT_REPLY_STAGES and not is_self_sender(sender, agent_role):
+            next_stage = COORDINATOR_NEXT_STAGE.get(incoming_stage)
+            if next_stage and stage_completed(case_id, next_stage):
+                logger.info(
+                    "SKIP inbound: duplicate_stage agent=coordinator incoming=%s next=%s case_id=%s",
+                    incoming_stage,
+                    next_stage,
+                    case_id,
+                )
+                return True, "duplicate_stage"
         if case_id and stage_completed(case_id, "CASE_READY"):
             content_upper = (msg.content or "").upper()
             if not any(token in content_upper for token in ("NEW_CASE", "APPROVE", "REJECT", "MORE INFO")):
@@ -485,6 +505,8 @@ def evaluate_outbound(
     case_id = extract_case_id(content) or (payload or {}).get("case_id") or case_id_hint
     if isinstance(case_id, str):
         case_id = case_id.upper()
+    if payload and case_id and not payload.get("case_id"):
+        payload = {**payload, "case_id": case_id}
 
     if stage == "HUMAN_ALERT" and case_id:
         ver_status = (get_verification_status(case_id) or "").upper()

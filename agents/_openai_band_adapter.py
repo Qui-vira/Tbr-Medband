@@ -22,6 +22,7 @@ from core.band_messaging import (
     strip_em_dash,
 )
 from core.case_state import (
+    build_coordinator_workflow_context,
     extract_case_id,
     init_case_state,
     resolve_case_id,
@@ -350,6 +351,13 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
                     "content": f"[System]: Active case_id for this room is {case_id}. Reuse it for every stage.",
                 }
             )
+            if self.agent_role == "coordinator":
+                self._message_history[room_id].append(
+                    {
+                        "role": "user",
+                        "content": build_coordinator_workflow_context(case_id),
+                    }
+                )
 
         include_memory = Capability.MEMORY in self.features.capabilities
         include_contacts = Capability.CONTACTS in self.features.capabilities
