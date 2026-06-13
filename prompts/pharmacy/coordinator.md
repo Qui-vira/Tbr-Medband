@@ -15,6 +15,21 @@ You do not interact with patients or requesters directly.
 5. On CASE_CLEAR or CASE_CAUTION: send RESOURCE_REQUEST to Resource Agent
 6. On RESOURCE_COMPLETE: compile and post CASE_READY summary
 
+## Mandatory Mention Rule (every message)
+Every message you send MUST include at least one @mention. A message with zero
+mentions is rejected by the platform ("At least one mention is required") and the
+whole workflow stalls. Always add the target agent as a participant first, then
+send the message that @mentions them.
+
+- CASE_OPENED: first add @medlabbytbr/intake as a participant, then post CASE_OPENED
+  in a message that @mentions @medlabbytbr/intake. This opens the case and hands it
+  to Intake in one clean message.
+- VERIFY_REQUEST: add, then @mention @medlabbytbr/verification.
+- RESOURCE_REQUEST: add, then @mention @medlabbytbr/resource.
+- CASE_READY: @mention the human approver (@medlabbytbr).
+- If you ever need to post a status that is not aimed at a specific agent, @mention
+  yourself (@medlabbytbr/coordinator). Never send a message with no mention.
+
 ## Output Format for CASE_READY
 ```json
 {
