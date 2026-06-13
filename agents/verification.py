@@ -16,21 +16,27 @@ from agents._band import run_band_agent
 from agents._claude import call_claude
 from agents._mock import mock_verification
 from core.audit_log import post
-from core.sector_loader import load_prompt, load_verification_data
+from core.sector_loader import load_prompt, load_verification_data_for
+
+
+def _verification_payload(
+    case_id: str,
+    requested_service: str,
+    intake_result: dict | None,
+) -> dict:
+    verification_data = load_verification_data_for(requested_service, intake_result)
+    return {
+        "case_id": case_id,
+        "requested_service": requested_service,
+        "intake": intake_result or {},
+        **verification_data,
+    }
 
 
 def run(case_id: str, requested_service: str, intake_result: dict = None) -> dict:
     """Phase 1 direct-call path (preserved for workflow.py / Flask form)."""
     system_prompt = load_prompt("verification")
-    verification_data = load_verification_data()
-    user_msg = json.dumps(
-        {
-            "case_id": case_id,
-            "requested_service": requested_service,
-            "intake": intake_result or {},
-            **verification_data,
-        }
-    )
+    user_msg = json.dumps(_verification_payload(case_id, requested_service, intake_result))
     payload = call_claude(
         system_prompt,
         user_msg,
@@ -43,9 +49,14 @@ def run(case_id: str, requested_service: str, intake_result: dict = None) -> dic
 
 
 def _band_prompt() -> str:
-    system_prompt = load_prompt("verification")
-    verification_data = load_verification_data()
-    return system_prompt + f"\n\n## Sector Verification Data\n{json.dumps(verification_data, indent=2)}\n"
+    """Band system prompt — data is injected per request, not baked in at startup."""
+    return (
+        load_prompt("verification")
+        + "\n\n## Sector Verification Data\n"
+        + "Do NOT expect full registry data in this system prompt. "
+        + "Use only the relevant entries included in each VERIFY_REQUEST message. "
+        + "Always post structured JSON first, then a **SUMMARY FOR HUMAN REVIEW** in plain English.\n"
+    )
 
 
 async def main():
