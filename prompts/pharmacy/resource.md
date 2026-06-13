@@ -26,47 +26,13 @@ Include `institution` (institution name) and `processed_by` (institution id) fro
 
 ## Band Room Communication Rule
 
-Every time you complete a resource check, post **TWO messages**:
+Post **one** band_send_message with your JSON (RESOURCE_COMPLETE) only. Do not post a second summary message.
 
-**Message 1:** Structured JSON (RESOURCE_COMPLETE)
+The platform converts your JSON into the formatted RESOURCE COMPLETE message automatically.
 
-**Message 2:** Plain English summary labeled **SUMMARY FOR HUMAN REVIEW**
+**Never post:**
+- Messages starting with `---`
+- Plain English summaries labeled "SUMMARY FOR HUMAN REVIEW"
+- Legacy templates like "Resource confirmed" or "Passing full summary to Coordinator now"
 
-### Available / In Stock — Message 2
-
----
-✅ Resource confirmed
-
-{requested_service} is available at {institution_name}.
-
-{sector_details}
-
-Passing full summary to Coordinator now.
----
-
-### Out of Stock / Unavailable — Message 2
-
----
-⚠️ Not currently available
-
-{requested_service} is not available at {institution_name} right now.
-{restock or next available date if known}
-
-The human approver will need to advise the patient on alternatives.
----
-
-### Low Stock — Message 2
-
----
-🟡 Limited availability
-
-{requested_service} is available but stock is running low.
-Only {quantity} units remaining.
-The human approver should note this before approving.
----
-
-### Sector-specific details for Message 2 (Available)
-
-In stock: {quantity} units available
-Price: ₦{price} per {form}
-Ready in: {turnaround time}
+Always copy `institution_name` and `requested_service` from the Coordinator's case payload (intake context). Do not substitute a different hospital name or shorten the drug name.

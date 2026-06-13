@@ -57,6 +57,18 @@ COORDINATOR_NEXT_STAGE: dict[str, str] = {
     "RESOURCE_COMPLETE": "CASE_READY",
 }
 
+LEGACY_MESSAGE_MARKERS = (
+    "SUMMARY FOR HUMAN REVIEW",
+    "Verification passed",
+    "Resource confirmed",
+    "CASE READY FOR YOUR REVIEW",
+    "Passing to Resource check now",
+    "Passing full summary to Coordinator now",
+    "Passing to Verification now",
+    "Passing to Coordinator now",
+    "Passing to Resource now",
+)
+
 
 @dataclass
 class OutboundDecision:
@@ -70,6 +82,152 @@ class OutboundDecision:
 
 def strip_em_dash(text: str) -> str:
     return text.replace("\u2014", "-").replace("\u2013", "-")
+
+
+def is_legacy_band_message(content: str) -> bool:
+    """Block old prompt templates and --- summary messages."""
+    stripped = content.strip()
+    if stripped.startswith("---"):
+        return True
+    upper = stripped.upper()
+    for marker in LEGACY_MESSAGE_MARKERS:
+        if marker.upper() in upper:
+            return True
+    return False
+
+
+def should_block_followup_summary(content: str, case_id: str | None) -> bool:
+    """Block a second natural-language summary when the formatted stage already posted."""
+    if not case_id:
+        return False
+    upper = content.upper()
+    if "VERIFICATION PASSED" in upper or "VERIFICATION FAILED" in upper:
+        return any(stage_completed(case_id, s) for s in ("CASE_CLEAR", "CASE_CAUTION", "CASE_ESCALATE"))
+    if ("RESOURCE CONFIRMED" in upper or "NOT CURRENTLY AVAILABLE" in upper) and "📦" not in content:
+        return stage_completed(case_id, "RESOURCE_COMPLETE")
+    if "CASE READY FOR YOUR REVIEW" in upper:
+        return stage_completed(case_id, "CASE_READY")
+    if "CASE READY FOR HUMAN REVIEW" in upper and stage_completed(case_id, "CASE_READY"):
+        return True
+    if "NO SAFETY CONCERNS FOUND" in upper or "PASSING TO RESOURCE" in upper:
+        return any(stage_completed(case_id, s) for s in ("CASE_CLEAR", "CASE_CAUTION"))
+    if "PASSING FULL SUMMARY TO COORDINATOR" in upper:
+        return stage_completed(case_id, "RESOURCE_COMPLETE")
+    return False
+
+
+def _is_routing_message(content: str) -> bool:
+    """Allow coordinator routing lines that are plain text without a workflow stage."""
+    upper = content.upper()
+    if any(
+        token in upper
+        for token in (
+            "@MEDLABBYTBR/INTAKE",
+            "@MEDLABBYTBR/VERIFICATION",
+            "@MEDLABBYTBR/RESOURCE",
+            "@MEDLABBYTBR/COORDINATOR",
+            "NEW_CASE_FROM_WEB",
+            "NEW_CASE",
+            "INTAKE_REQUEST",
+            "VERIFY_REQUEST",
+            "RESOURCE_REQUEST",
+        )
+    ):
+        return True
+    if upper.startswith("@") and "PLEASE" in upper:
+        return True
+    return False
+
+
+def enrich_payload_from_case_state(payload: dict[str, Any], case_id: str) -> dict[str, Any]:
+    """Merge Postgres case context so Resource/Verification use intake institution and service."""
+    state = get_case_state(case_id)
+    intake = state.get("intake") if isinstance(state.get("intake"), dict) else {}
+    opened = state.get("opened") if isinstance(state.get("opened"), dict) else {}
+    merged = {**payload}
+    merged.setdefault("case_id", case_id)
+
+    for key in (
+        "requester_name",
+        "requested_service",
+        "presenting_issue",
+        "urgency",
+        "prescription_code",
+        "institution_name",
+        "institution_id",
+    ):
+        val = intake.get(key) or opened.get(key)
+        if val:
+            merged[key] = val
+
+    inst = intake.get("institution_name") or opened.get("institution_name")
+    if inst:
+        merged["institution_name"] = inst
+        merged["institution"] = inst
+    else:
+        merged.setdefault("institution_name", merged.get("institution") or "Demo Institution")
+        merged["institution"] = merged.get("institution_name") or merged.get("institution") or "Demo Institution"
+
+    return merged
+
+
+def extract_approver(content: str) -> str:
+    for pattern in (
+        r"Approved by[:\s]+(.+?)(?:\n|$)",
+        r"Decision:\s*Approved by[:\s]+(.+?)(?:\n|$)",
+        r"approval was made by[:\s]+(.+?)(?:\n|$)",
+    ):
+        match = re.search(pattern, content, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+    return "Human reviewer"
+
+
+def format_case_approved(case_id: str, payload: dict[str, Any] | None = None, approver: str = "") -> str:
+    state = get_case_state(case_id)
+    intake = state.get("intake") if isinstance(state.get("intake"), dict) else {}
+    data = payload or {}
+    patient = _pick(intake, "requester_name") or _pick(data, "requester_name", "patient_name")
+    request = _pick(intake, "requested_service") or _pick(data, "requested_service")
+    decision_by = approver or _pick(data, "approved_by", "approver_name") or "Human reviewer"
+    return strip_em_dash(
+        "\n".join(
+            [
+                "✅ CASE APPROVED",
+                "",
+                f"Case ID: {case_id}",
+                "",
+                "Patient:",
+                patient or "Unknown",
+                "",
+                "Request:",
+                request or "Not specified",
+                "",
+                "Decision:",
+                f"Approved by {decision_by}",
+                "",
+                "Status:",
+                "Closed",
+                "",
+                "Important:",
+                "No AI approved this case. Final approval was made by the human reviewer.",
+            ]
+        )
+    )
+
+
+def detect_approval_outbound(content: str, payload: dict[str, Any] | None) -> bool:
+    upper = content.upper()
+    if payload and str(payload.get("status", "")).upper() == "CASE_APPROVED":
+        return True
+    if "CASE APPROVED" in upper:
+        return True
+    if "APPROVED BY" in upper and "CASE READY" not in upper:
+        return True
+    if re.search(r"\bAPPROVE\b", content, re.IGNORECASE) and "CASE READY" not in upper:
+        if "PROCEED" in upper or "APPROVED" in upper or "CONFIRMATION" in upper:
+            return True
+    return False
 
 
 def normalize_sender(name: str | None) -> str:
@@ -175,7 +333,7 @@ def format_intake_complete(payload: dict[str, Any]) -> str:
 
 def format_verification(payload: dict[str, Any]) -> str:
     status = _pick(payload, "status", default="CASE_CLEAR").upper()
-    drug = _pick(payload, "drug_name", "requested_service")
+    drug = _pick(payload, "requested_service") or _pick(payload, "drug_name", "test_name")
     reason = _pick(payload, "reason", "recommendation")
     if status == "CASE_ESCALATE":
         return strip_em_dash(
@@ -228,8 +386,8 @@ def format_verification(payload: dict[str, Any]) -> str:
 
 
 def format_resource_complete(payload: dict[str, Any]) -> str:
-    name = _pick(payload, "drug_name", "requested_service", "test_name")
-    institution = _pick(payload, "institution", "institution_name")
+    name = _pick(payload, "requested_service") or _pick(payload, "drug_name", "test_name")
+    institution = _pick(payload, "institution_name") or _pick(payload, "institution")
     in_stock = payload.get("in_stock", True)
     qty = payload.get("quantity_available")
     notes = _pick(payload, "notes")
@@ -359,6 +517,7 @@ def format_human_alert(payload: dict[str, Any]) -> str:
 
 
 def format_stage_message(stage: str, payload: dict[str, Any], case_id: str) -> str:
+    payload = enrich_payload_from_case_state(payload or {}, case_id)
     formatters = {
         "CASE_OPENED": format_case_opened,
         "INTAKE_COMPLETE": format_intake_complete,
@@ -368,6 +527,11 @@ def format_stage_message(stage: str, payload: dict[str, Any], case_id: str) -> s
         "RESOURCE_COMPLETE": format_resource_complete,
         "CASE_READY": lambda p: format_case_ready(p, case_id),
         "HUMAN_ALERT": format_human_alert,
+        "CASE_APPROVED": lambda p: format_case_approved(
+            case_id,
+            p,
+            _pick(p, "approved_by") or "Human reviewer",
+        ),
     }
     formatter = formatters.get(stage)
     if formatter:
@@ -508,6 +672,36 @@ def evaluate_outbound(
     if payload and case_id and not payload.get("case_id"):
         payload = {**payload, "case_id": case_id}
 
+    if is_legacy_band_message(content):
+        logger.info(
+            "SKIP outbound: legacy_template agent=%s case_id=%s room=%s",
+            agent_role,
+            case_id,
+            room_id,
+        )
+        return OutboundDecision(skip=True, reason="legacy_template", case_id=case_id)
+
+    if should_block_followup_summary(content, case_id):
+        logger.info(
+            "SKIP outbound: duplicate_summary agent=%s case_id=%s room=%s",
+            agent_role,
+            case_id,
+            room_id,
+        )
+        return OutboundDecision(skip=True, reason="duplicate_summary", case_id=case_id)
+
+    if (
+        case_id
+        and stage_completed(case_id, "CASE_READY")
+        and detect_approval_outbound(content, payload)
+        and not stage
+    ):
+        stage = "CASE_APPROVED"
+        if not payload:
+            payload = {"status": "CASE_APPROVED", "case_id": case_id}
+        payload = enrich_payload_from_case_state(payload, case_id)
+        payload["approved_by"] = extract_approver(content)
+
     if stage == "HUMAN_ALERT" and case_id:
         ver_status = (get_verification_status(case_id) or "").upper()
         if ver_status in {"CASE_CLEAR", "CASE_CAUTION"}:
@@ -524,6 +718,7 @@ def evaluate_outbound(
         "CASE_OPENED",
         "CASE_READY",
         "HUMAN_ALERT",
+        "CASE_APPROVED",
     }:
         logger.info(
             "SKIP outbound: invalid_routing agent=%s stage=%s case_id=%s",
@@ -565,7 +760,8 @@ def evaluate_outbound(
         record_stage(case_id, stage, payload=payload, room_id=room_id)
 
     if payload and stage and stage not in ROUTING_ONLY_STAGES:
-        formatted = format_stage_message(stage, payload, case_id or "")
+        enriched = enrich_payload_from_case_state(payload, case_id or "")
+        formatted = format_stage_message(stage, enriched, case_id or "")
         return OutboundDecision(
             formatted_content=formatted,
             stage=stage,
@@ -574,7 +770,8 @@ def evaluate_outbound(
 
     if is_visible_json(content) and stage not in ROUTING_ONLY_STAGES:
         if payload and stage:
-            formatted = format_stage_message(stage, payload, case_id or "")
+            enriched = enrich_payload_from_case_state(payload, case_id or "")
+            formatted = format_stage_message(stage, enriched, case_id or "")
             return OutboundDecision(formatted_content=formatted, stage=stage, case_id=case_id)
         logger.info(
             "SKIP outbound: raw_json_blocked agent=%s room=%s",
@@ -582,6 +779,16 @@ def evaluate_outbound(
             room_id,
         )
         return OutboundDecision(skip=True, reason="raw_json_blocked", case_id=case_id)
+
+    if not stage and content.strip() and not _is_routing_message(content):
+        logger.info(
+            "SKIP outbound: unformatted_message agent=%s case_id=%s room=%s preview=%s",
+            agent_role,
+            case_id,
+            room_id,
+            content[:80].replace("\n", " "),
+        )
+        return OutboundDecision(skip=True, reason="unformatted_message", case_id=case_id)
 
     return OutboundDecision(
         formatted_content=content if content else None,

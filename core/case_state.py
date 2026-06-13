@@ -24,6 +24,8 @@ TRACKED_STAGES = frozenset(
         "RESOURCE_COMPLETE",
         "CASE_READY",
         "HUMAN_ALERT",
+        "CASE_APPROVED",
+        "CASE_REJECTED",
     }
 )
 
@@ -217,7 +219,7 @@ def build_coordinator_workflow_context(case_id: str) -> str:
     elif stage_completed(case_id, "CASE_CLEAR") or stage_completed(case_id, "CASE_CAUTION"):
         if not stage_completed(case_id, "RESOURCE_REQUEST"):
             lines.append(
-                "required_action: Verification passed. Send exactly one RESOURCE_REQUEST to @medlabbytbr/resource."
+                "required_action: Verification complete. Send exactly one RESOURCE_REQUEST to @medlabbytbr/resource."
             )
     elif stage_completed(case_id, "CASE_ESCALATE"):
         if not stage_completed(case_id, "HUMAN_ALERT"):

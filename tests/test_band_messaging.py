@@ -8,7 +8,9 @@ from band.core.types import PlatformMessage
 from core.band_messaging import (
     evaluate_outbound,
     extract_recipient,
+    format_case_approved,
     format_case_opened,
+    is_legacy_band_message,
     is_visible_json,
     should_skip_inbound,
     strip_em_dash,
@@ -147,3 +149,95 @@ def test_intake_complete_includes_case_id():
         {"case_id": "MB-ABC12345", "requester_name": "Ada", "requested_service": "Amox"}
     )
     assert "Case ID: MB-ABC12345" in text
+
+
+def test_legacy_verification_summary_blocked():
+    legacy = "---\n✅ Verification passed\n\nAmoxicillin is cleared.\nNo safety concerns found. Passing to Resource check now.\n---"
+    decision = evaluate_outbound("verification", legacy, room_id="room1", case_id_hint="MB-TEST001")
+    assert decision.skip is True
+    assert decision.reason == "legacy_template"
+
+
+def test_legacy_resource_summary_blocked():
+    legacy = "---\n✅ Resource confirmed\n\nAmoxicillin is available at General Hospital.\nPassing full summary to Coordinator now.\n---"
+    decision = evaluate_outbound("resource", legacy, room_id="room1", case_id_hint="MB-TEST002")
+    assert decision.skip is True
+    assert decision.reason == "legacy_template"
+
+
+def test_legacy_case_ready_blocked():
+    legacy = "📋 CASE READY FOR YOUR REVIEW\n\nPatient: Ada"
+    decision = evaluate_outbound("coordinator", legacy, room_id="room1", case_id_hint="MB-TEST003")
+    assert decision.skip is True
+    assert decision.reason == "legacy_template"
+
+
+def test_followup_verification_blocked_after_stage():
+    case_id = "MB-TEST004"
+    record_stage(case_id, "CASE_CLEAR", payload={"status": "CASE_CLEAR", "case_id": case_id})
+    followup = "✅ Verification passed\n\nAmoxicillin is cleared to proceed."
+    decision = evaluate_outbound("verification", followup, room_id="room1", case_id_hint=case_id)
+    assert decision.skip is True
+    assert decision.reason in ("legacy_template", "duplicate_summary")
+
+
+def test_resource_uses_intake_context_from_postgres():
+    case_id = "MB-TEST005"
+    record_stage(
+        case_id,
+        "INTAKE_COMPLETE",
+        payload={
+            "status": "INTAKE_COMPLETE",
+            "case_id": case_id,
+            "requester_name": "Ada Okonkwo",
+            "requested_service": "Amoxicillin 500mg",
+            "institution_name": "Demo Institution",
+            "urgency": "medium",
+        },
+    )
+    resource_json = json.dumps(
+        {
+            "status": "RESOURCE_COMPLETE",
+            "case_id": case_id,
+            "drug_name": "Amoxicillin",
+            "institution": "General Hospital",
+            "in_stock": True,
+            "quantity_available": 120,
+        }
+    )
+    decision = evaluate_outbound("resource", resource_json, room_id="room1")
+    assert decision.skip is False
+    assert decision.formatted_content is not None
+    assert "Demo Institution" in decision.formatted_content
+    assert "Amoxicillin 500mg" in decision.formatted_content
+    assert "General Hospital" not in decision.formatted_content
+
+
+def test_case_approved_format():
+    case_id = "MB-86A62017"
+    record_stage(
+        case_id,
+        "INTAKE_COMPLETE",
+        payload={
+            "case_id": case_id,
+            "requester_name": "Ada Okonkwo",
+            "requested_service": "Amoxicillin 500mg",
+        },
+    )
+    record_stage(case_id, "CASE_READY", payload={"status": "CASE_READY", "case_id": case_id})
+    payload = json.dumps({"status": "CASE_APPROVED", "case_id": case_id, "approved_by": "Kehinde-David Damilare"})
+    decision = evaluate_outbound("coordinator", payload, room_id="room1")
+    assert decision.skip is False
+    assert decision.formatted_content is not None
+    assert "✅ CASE APPROVED" in decision.formatted_content
+    assert "MB-86A62017" in decision.formatted_content
+    assert "Ada Okonkwo" in decision.formatted_content
+    assert "Amoxicillin 500mg" in decision.formatted_content
+    assert "Approved by Kehinde-David Damilare" in decision.formatted_content
+    assert "No AI approved this case" in decision.formatted_content
+
+
+def test_is_legacy_band_message():
+    assert is_legacy_band_message("---\n✅ Verification passed") is True
+    assert is_legacy_band_message("Resource confirmed at hospital") is True
+    assert is_legacy_band_message("📋 INTAKE COMPLETE\n\nPatient: Ada") is False

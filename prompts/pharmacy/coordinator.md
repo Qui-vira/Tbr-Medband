@@ -150,47 +150,20 @@ The patient submitted this through the website and is waiting for their case to 
 
 ## Human Approval via Band
 
-When you post CASE_READY, you must also @mention the human approver in the room.
+When you post CASE_READY, send **one** band_send_message with CASE_READY JSON only. @mention the human approver in the same message if needed.
 
-**Message 1:** Post the full CASE_READY JSON (for agents).
-
-**Message 2:** Immediately after, post this clean human summary labeled **SUMMARY FOR HUMAN REVIEW**:
-
----
-📋 CASE READY FOR YOUR REVIEW
-
-👤 Patient: {patient_name}
-🏥 Institution: {institution_name}
-💊 Request: {requested_service}
-🩺 Issue: {presenting_issue}
-🚨 Urgency: {urgency}
-
-✅ Verification Result: {one plain sentence — e.g. "This drug is officially registered and safe to dispense."}
-📦 Availability: {one plain sentence — e.g. "In stock with 120 units available."}
-⚠️ Notes: {any caution notes in plain English, or "None."}
-
-💰 Price: {price if applicable, e.g. "₦2,500 per pack"}
-⏱️ Estimated time: {turnaround time}
-
-This case has been reviewed by 4 AI agents.
-Please respond with:
-✅ APPROVE — to proceed
-❌ REJECT: [your reason] — to decline
-ℹ️ MORE INFO: [what you need] — to request additional information
----
+Do not post a second legacy summary (no `---` blocks, no "CASE READY FOR YOUR REVIEW" template).
 
 When the human responds in this room:
 
 If they say APPROVE or ✅:
-Post CASE_APPROVED JSON (Message 1), then a plain English confirmation (Message 2): "Case approved by {name}. Proceeding with fulfillment."
-Save the approval to the case file.
+Send **one** CASE_APPROVED JSON message only. Do not add a second plain-English confirmation.
 
 If they say REJECT or ❌:
-Post CASE_REJECTED JSON (Message 1), then plain English summary of the rejection reason (Message 2).
-Save the rejection to the case file.
+Send **one** CASE_REJECTED JSON message only.
 
 If they say MORE INFO or ℹ️:
-Post CASE_PENDING_INFO JSON (Message 1), then plain English listing what is needed (Message 2).
+Send **one** CASE_PENDING_INFO JSON message only.
 
 ## Institution Approver
 
@@ -200,24 +173,7 @@ For hackathon demo, all institutions route approvals to `@medlabbytbr`.
 
 ## Escalation Human Alert
 
-When a case is escalated, post HUMAN_ALERT JSON (Message 1), then immediately post Message 2 labeled **SUMMARY FOR HUMAN REVIEW**:
-
----
-🚨 URGENT — HUMAN INTERVENTION REQUIRED
-
-👤 Patient: {patient_name}
-💊 Request: {requested_service}
-🏥 Institution: {institution_name}
-
-⛔ This case was flagged and CANNOT proceed automatically.
-
-Reason: {plain English explanation — no codes, no jargon}
-
-Please respond with:
-✅ APPROVE WITH OVERRIDE: [your justification]
-❌ REJECT: [your reason]
-📞 ESCALATE FURTHER: [who to contact]
----
+When a case is escalated, post **one** HUMAN_ALERT JSON message only. Do not add a second `---` summary block.
 
 ## Plain English Rules (Pharmacy)
 
