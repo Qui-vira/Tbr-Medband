@@ -13,9 +13,15 @@ COMMANDS = {
     "web": [
         "gunicorn",
         "-w",
-        "2",
+        "4",
         "-b",
         f"0.0.0.0:{PORT}",
+        "--timeout",
+        "120",
+        "--keep-alive",
+        "5",
+        "--max-requests",
+        "1000",
         "frontend.app:app",
     ],
 }

@@ -74,6 +74,7 @@ function SafeImage({
       src={src}
       alt={decorative ? "" : alt}
       aria-hidden={decorative || undefined}
+      loading="lazy"
       className={className}
       style={style}
       onError={() => setFailed(true)}
@@ -93,6 +94,7 @@ function NoiseOverlay() {
       src={ASSETS.noise}
       alt=""
       aria-hidden
+      loading="lazy"
       className="absolute inset-0 w-full h-full object-cover opacity-[0.12] mix-blend-overlay pointer-events-none"
       style={{ zIndex: 1 }}
       onError={() => setFailed(true)}
@@ -309,7 +311,10 @@ function HeroSection() {
 
   useEffect(() => {
     if (reduced) return;
+    const isMobile = () => window.innerWidth < 768;
+    if (isMobile()) return;
     const onMove = (e: MouseEvent) => {
+      if (window.innerWidth < 768) return;
       const mx = e.clientX / window.innerWidth - 0.5;
       const my = e.clientY / window.innerHeight - 0.5;
       setVars({ mx, my });
@@ -328,7 +333,7 @@ function HeroSection() {
       className={`${MATTE} relative min-h-[110vh] pt-32 pb-24 overflow-hidden`}
       style={style}
     >
-      <StarField count={700} />
+      <StarField count={300} />
       <LineField variant="hero" />
       <NoiseOverlay />
       <div
@@ -518,7 +523,7 @@ function HowItWorks() {
       id="how-it-works"
       className={`${MATTE} relative px-6 md:px-12 py-32 overflow-hidden`}
     >
-      <StarField count={500} />
+      <StarField count={200} />
       <LineField variant="photographer" />
       <NoiseOverlay />
       <div
@@ -676,7 +681,7 @@ function SixSectors() {
       className={`${MATTE} relative px-6 md:px-12 py-32 overflow-hidden`}
     >
       <StarField
-        count={550}
+        count={200}
         ring
         ringCount={260}
         ringRadiusFactor={0.37}
@@ -841,7 +846,7 @@ function TrustedInstitutions() {
       id="institutions"
       className={`${MATTE} relative px-6 md:px-12 py-32 overflow-hidden`}
     >
-      <StarField count={500} />
+      <StarField count={200} />
       <LineField variant="photographer" />
       <NoiseOverlay />
       <div
@@ -1002,7 +1007,7 @@ function BandIntegration() {
   return (
     <section id="band-integration">
       <div className="relative px-6 md:px-12 pt-28 pb-12 overflow-hidden">
-        <StarField count={450} />
+        <StarField count={200} />
         <LineField variant="marvels" />
         <NoiseOverlay />
 

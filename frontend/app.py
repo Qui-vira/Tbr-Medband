@@ -2,12 +2,14 @@
 import json
 import os
 import sys
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, redirect, render_template, request
+from flask_compress import Compress
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -16,12 +18,33 @@ load_dotenv(ROOT / ".env")
 
 from core.band_client import save_pending_case, send_to_coordinator_sync
 from core.reports import build_patient_report
-from core.sector_loader import SECTOR_META, get_active_sector, get_institution, human_role, load_institutions, sector_meta, set_active_sector
+from core.sector_loader import (
+    SECTOR_META,
+    band_room_name,
+    get_active_sector,
+    get_institution,
+    human_role,
+    load_institutions,
+    preload_all_caches,
+    sector_meta,
+    set_active_sector,
+)
 from core.workflow import load_case, run_case, run_case_stream
 
 app = Flask(__name__, template_folder=".")
+Compress(app)
 
 BAND_MODE = os.environ.get("BAND_MODE", "true").lower() == "true"
+
+preload_all_caches()
+
+
+@app.after_request
+def add_cache_headers(response):
+    if request.path.startswith("/static/"):
+        response.cache_control.max_age = 86400
+        response.cache_control.public = True
+    return response
 
 
 def _form_raw(data) -> tuple[str, str]:
@@ -125,18 +148,28 @@ def _build_band_case_payload(data, raw_input: str, sector: str) -> dict:
 def _submit_via_band(data, raw_input: str, sector: str) -> dict:
     case_payload = _build_band_case_payload(data, raw_input, sector)
     save_pending_case(case_payload)
-    band_result = send_to_coordinator_sync(case_payload)
-    return {
+    institution_id = case_payload.get("institution_id")
+    band_room = band_room_name(case_payload["case_id"], sector, institution_id)
+
+    result = {
         "case_id": case_payload["case_id"],
         "status": "processing",
         "message": "Your case has been sent to the agents.",
-        "band_room": band_result.get("band_room"),
-        "band_room_id": band_result.get("room_id"),
+        "band_room": band_room,
         "track_url": f"/status?case_id={case_payload['case_id']}",
         "human_role": human_role(sector),
         "turnaround": case_payload.get("turnaround"),
         "institution_name": case_payload.get("institution_name"),
     }
+
+    def _send_async():
+        try:
+            send_to_coordinator_sync(case_payload)
+        except Exception:
+            pass
+
+    threading.Thread(target=_send_async, daemon=True).start()
+    return result
 
 
 def _band_stream_events(data, raw_input: str, sector: str):

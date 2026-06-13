@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css">
   <style>
     :root {
       --bg: #0A0F1A;
@@ -416,6 +417,42 @@
       color: var(--danger);
       font-size: 0.875rem;
     }
+
+    .institution-skeleton {
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 1.25rem;
+      min-height: 180px;
+      animation: skeleton-pulse 1.4s ease-in-out infinite;
+    }
+
+    .institution-skeleton .sk-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      margin-bottom: 0.75rem;
+    }
+
+    .institution-skeleton .sk-line {
+      height: 12px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      margin-bottom: 0.5rem;
+    }
+
+    .institution-skeleton .sk-line.w60 { width: 60%; }
+    .institution-skeleton .sk-line.w40 { width: 40%; }
+    .institution-skeleton .sk-line.w80 { width: 80%; }
+
+    @keyframes skeleton-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+
+    #nprogress .bar { background: var(--teal) !important; height: 3px !important; }
+    #nprogress .peg { box-shadow: 0 0 10px var(--teal), 0 0 5px var(--teal) !important; }
 
     /* ── Demo buttons ── */
     .demo-section {
@@ -854,7 +891,7 @@
         <div id="step-2" class="step">
           <h2 class="step-heading" id="institutionHeading">Select a Pharmacy provider</h2>
           <div class="institution-grid" id="institutionGrid">
-            <div class="institution-loading">Loading providers…</div>
+            <div class="institution-empty">Select a sector, then tap Next to browse providers.</div>
           </div>
           <div class="step-nav">
             <button type="button" class="step-btn secondary" id="step2Back">← Back</button>
@@ -1005,7 +1042,8 @@
     <div class="footer-meta">Band of Agents Hackathon 2026 · Track 3</div>
   </footer>
 
-  <script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.js" defer></script>
+  <script defer>
     const SECTORS = {
       pharmacy: { label: 'Pharmacy', icon: '💊', role: 'Pharmacist' },
       hospital_triage: { label: 'Hospital Triage', icon: '🏥', role: 'Doctor / Nurse' },
@@ -1064,6 +1102,19 @@
     let currentStep = 1;
     let selectedInstitutionId = null;
     let institutionsFetchToken = 0;
+
+    if (window.NProgress) {
+      NProgress.configure({ showSpinner: false, trickleSpeed: 120 });
+      NProgress.start();
+      window.addEventListener('load', () => NProgress.done());
+    }
+
+    function showInstitutionSkeletons() {
+      institutionGrid.innerHTML =
+        '<div class="institution-skeleton"><div class="sk-logo"></div><div class="sk-line w80"></div><div class="sk-line w60"></div><div class="sk-line w40"></div></div>' +
+        '<div class="institution-skeleton"><div class="sk-logo"></div><div class="sk-line w80"></div><div class="sk-line w60"></div><div class="sk-line w40"></div></div>' +
+        '<div class="institution-skeleton"><div class="sk-logo"></div><div class="sk-line w80"></div><div class="sk-line w60"></div><div class="sk-line w40"></div></div>';
+    }
 
     function getSelectedSector() {
       const checked = form.querySelector('input[name="sector"]:checked');
@@ -1147,7 +1198,11 @@
       applySectorTheme(sector);
       updateSectorFields(sector);
       clearInstitutionSelection();
-      fetchInstitutions(sector);
+      if (currentStep === 2) {
+        fetchInstitutions(sector);
+      } else {
+        institutionGrid.innerHTML = '<div class="institution-empty">Select a sector, then tap Next to browse providers.</div>';
+      }
     }
 
     function escapeHtml(str) {
@@ -1197,7 +1252,7 @@
 
     async function fetchInstitutions(sector) {
       const token = ++institutionsFetchToken;
-      institutionGrid.innerHTML = '<div class="institution-loading">Loading providers…</div>';
+      showInstitutionSkeletons();
 
       try {
         const response = await fetch('/api/institutions/' + encodeURIComponent(sector));
@@ -1379,7 +1434,7 @@
     function setLoading(loading) {
       submitBtn.disabled = loading;
       if (loading) {
-        submitLabel.innerHTML = '<span class="spinner"></span> Agents processing your case...';
+        submitLabel.innerHTML = '<span class="spinner"></span> Sending to agents...';
       } else {
         submitLabel.textContent = 'Submit Case';
       }

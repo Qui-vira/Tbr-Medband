@@ -2,6 +2,7 @@
 import json
 import os
 import threading
+from functools import lru_cache
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -90,16 +91,26 @@ def sector_meta(sector: str | None = None) -> dict:
     return SECTOR_META.get(s, {"label": s, "color": "#00c896", "icon": "🏥"})
 
 
-def load_prompt(agent_name: str) -> str:
-    path = ROOT / "prompts" / get_active_sector() / f"{agent_name}.md"
+@lru_cache(maxsize=None)
+def get_cached_prompt(sector: str, agent: str) -> str:
+    path = ROOT / "prompts" / sector / f"{agent}.md"
     with open(path, encoding="utf-8") as f:
         return f.read()
 
 
-def load_data(filename: str) -> dict | list:
-    path = ROOT / "data" / get_active_sector() / filename
+def load_prompt(agent_name: str) -> str:
+    return get_cached_prompt(get_active_sector(), agent_name)
+
+
+@lru_cache(maxsize=None)
+def get_cached_data(sector: str, filename: str) -> dict | list:
+    path = ROOT / "data" / sector / filename
     with open(path, encoding="utf-8") as f:
         return json.load(f)
+
+
+def load_data(filename: str) -> dict | list:
+    return get_cached_data(get_active_sector(), filename)
 
 
 def load_verification_data() -> dict:
@@ -356,7 +367,8 @@ def human_role(sector: str | None = None) -> str:
     return HUMAN_ROLES.get(sector or get_active_sector(), "Human Professional")
 
 
-def _load_institutions_index() -> dict:
+@lru_cache(maxsize=1)
+def get_all_institutions() -> dict:
     path = ROOT / "data" / "institutions.json"
     if not path.exists():
         return {}
@@ -364,9 +376,32 @@ def _load_institutions_index() -> dict:
         return json.load(f)
 
 
+@lru_cache(maxsize=None)
+def get_sector_institutions(sector: str) -> list:
+    return get_all_institutions().get(sector, [])
+
+
 def load_institutions(sector: str | None = None) -> list:
     sector = sector or get_active_sector()
-    return _load_institutions_index().get(sector, [])
+    return get_sector_institutions(sector)
+
+
+def preload_all_caches() -> None:
+    """Warm in-memory caches for institutions, prompts, and sector data."""
+    get_all_institutions()
+    for sector in SECTORS:
+        for agent in ("coordinator", "intake", "verification", "resource"):
+            try:
+                get_cached_prompt(sector, agent)
+            except FileNotFoundError:
+                pass
+        data_dir = ROOT / "data" / sector
+        if data_dir.is_dir():
+            for path in data_dir.glob("*.json"):
+                try:
+                    get_cached_data(sector, path.name)
+                except (FileNotFoundError, json.JSONDecodeError):
+                    pass
 
 
 def get_institution(sector: str, institution_id: str) -> dict | None:
