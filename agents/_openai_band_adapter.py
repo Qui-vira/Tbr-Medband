@@ -13,6 +13,15 @@ from band.core.simple_adapter import SimpleAdapter
 from band.core.types import AdapterFeatures, Capability, Emit, PlatformMessage
 from band.runtime.prompts import render_system_prompt
 
+from core.band_messaging import (
+    SEND_MESSAGE_TOOLS,
+    evaluate_outbound,
+    record_outbound_success,
+    should_skip_inbound,
+    strip_em_dash,
+)
+from core.case_state import extract_case_id, try_parse_json_payload
+
 logger = logging.getLogger(__name__)
 
 OpenAIMessages = list[dict[str, Any]]
@@ -204,6 +213,7 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
         base_url: str = "https://api.aimlapi.com/v1",
         max_tokens: int = 4096,
         features: AdapterFeatures | None = None,
+        agent_role: str = "coordinator",
     ):
         super().__init__(
             history_converter=OpenAIHistoryConverter(),
@@ -212,6 +222,7 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
         self.model = model
         self._prompt = prompt
         self.max_tokens = max_tokens
+        self.agent_role = agent_role
         self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         self._message_history: dict[str, list[dict[str, Any]]] = {}
         self._system_prompt = ""
@@ -224,7 +235,42 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
             custom_section=self._prompt or "",
             features=self.features,
         )
-        logger.info("AIML OpenAI adapter started for agent: %s", agent_name)
+        logger.info("AIML OpenAI adapter started for agent: %s (role=%s)", agent_name, self.agent_role)
+
+    async def _execute_tool(
+        self,
+        tools: AgentToolsProtocol,
+        tool_name: str,
+        tool_input: dict[str, Any],
+        room_id: str,
+    ) -> tuple[Any, bool]:
+        if tool_name in SEND_MESSAGE_TOOLS:
+            content = tool_input.get("content", "")
+            decision = evaluate_outbound(
+                self.agent_role,
+                content,
+                room_id=room_id,
+            )
+            if decision.skip:
+                return (
+                    {
+                        "status": "skipped",
+                        "reason": decision.reason,
+                        "stage": decision.stage,
+                        "case_id": decision.case_id,
+                    },
+                    False,
+                )
+            payload = try_parse_json_payload(content)
+            if decision.formatted_content:
+                tool_input = {**tool_input, "content": decision.formatted_content}
+            result = await tools.execute_tool_call(tool_name, tool_input)
+            if not decision.skip:
+                record_outbound_success(decision, payload, room_id)
+            return result, False
+
+        result = await tools.execute_tool_call(tool_name, tool_input)
+        return result, False
 
     async def on_message(
         self,
@@ -237,6 +283,25 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
         is_session_bootstrap: bool,
         room_id: str,
     ) -> None:
+        from agents._band import apply_sector_from_message
+
+        apply_sector_from_message({"content": msg.content})
+        case_id = extract_case_id(msg.content or "")
+        skip, reason = should_skip_inbound(
+            self.agent_role,
+            msg,
+            case_id=case_id,
+        )
+        if skip:
+            logger.info(
+                "Skipped message processing: reason=%s agent=%s msg_id=%s case_id=%s",
+                reason,
+                self.agent_role,
+                msg.id,
+                case_id,
+            )
+            return
+
         if is_session_bootstrap:
             self._message_history[room_id] = (
                 _sanitize_openai_messages(list(history)) if history else []
@@ -254,7 +319,7 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
             )
 
         self._message_history[room_id].append(
-            {"role": "user", "content": msg.format_for_llm()}
+            {"role": "user", "content": strip_em_dash(msg.format_for_llm())}
         )
 
         include_memory = Capability.MEMORY in self.features.capabilities
@@ -340,13 +405,19 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
                         logger.warning("Failed to send tool_call event: %s", exc)
 
                 try:
-                    result = await tools.execute_tool_call(tool_name, tool_input)
-                    result_str = (
-                        json.dumps(result, default=str)
-                        if not isinstance(result, str)
-                        else result
+                    result, is_error_override = await self._execute_tool(
+                        tools, tool_name, tool_input, room_id
                     )
-                    is_error = False
+                    if isinstance(result, dict) and result.get("status") == "skipped":
+                        result_str = json.dumps(result, default=str)
+                        is_error = False
+                    else:
+                        result_str = (
+                            json.dumps(result, default=str)
+                            if not isinstance(result, str)
+                            else result
+                        )
+                        is_error = is_error_override
                 except Exception as exc:
                     result_str = f"Error: {exc}"
                     is_error = True

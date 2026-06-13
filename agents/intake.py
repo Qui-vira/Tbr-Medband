@@ -44,12 +44,12 @@ def run(case_id: str, raw_input: str, institution: dict | None = None) -> dict:
 
 
 def _band_prompt() -> str:
-    """Band system prompt with mandatory two-message rule reinforcement."""
     return (
         load_prompt("intake")
         + "\n\n## Band posting reminder\n"
-        + "Always post structured JSON first, then a **separate message** starting with "
-        + "`SUMMARY FOR HUMAN REVIEW` in plain English. Never post JSON only.\n"
+        + "Post one clean human-readable INTAKE COMPLETE message via band_send_message. "
+        + "Never post raw JSON. Only respond when the Coordinator @mentions you. "
+        + "Never respond to your own messages.\n"
     )
 
 

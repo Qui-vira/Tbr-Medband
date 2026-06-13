@@ -55,7 +55,9 @@ def _band_prompt() -> str:
         + "\n\n## Sector Verification Data\n"
         + "Do NOT expect full registry data in this system prompt. "
         + "Use only the relevant entries included in each VERIFY_REQUEST message. "
-        + "Always post structured JSON first, then a **SUMMARY FOR HUMAN REVIEW** in plain English.\n"
+        + "Post one clean human-readable verification message via band_send_message. "
+        + "Never post raw JSON. Only respond to the Coordinator. "
+        + "Never message Resource directly.\n"
     )
 
 

@@ -55,7 +55,9 @@ def _band_prompt() -> str:
         + "\n\n## Sector Resource Data\n"
         + "Do NOT expect full inventory data in this system prompt. "
         + "Use only the relevant entries included in each RESOURCE_REQUEST message. "
-        + "Always post structured JSON first, then a **SUMMARY FOR HUMAN REVIEW** in plain English.\n"
+        + "Post one clean human-readable RESOURCE COMPLETE message via band_send_message. "
+        + "Never post raw JSON. Only respond to the Coordinator. "
+        + "Never message Verification directly.\n"
     )
 
 
