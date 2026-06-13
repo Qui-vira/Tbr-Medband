@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { getParticleCount } from "@/lib/particles";
 
 interface Star {
   x: number;
@@ -74,8 +75,10 @@ export function StarField({
     if (!ctx) return;
 
     const buildStars = (w: number, h: number) => {
+      const effectiveCount = getParticleCount(count);
+      const effectiveRingCount = getParticleCount(ringCount);
       const bg: Star[] = [];
-      for (let i = 0; i < count; i++) {
+      for (let i = 0; i < effectiveCount; i++) {
         bg.push({
           x: Math.random() * w,
           y: Math.random() * h,
@@ -96,7 +99,7 @@ export function StarField({
 
       const rs: Star[] = [];
       if (ring) {
-        for (let i = 0; i < ringCount * 2; i++) {
+        for (let i = 0; i < effectiveRingCount * 2; i++) {
           const angle = Math.random() * Math.PI * 2;
           const offset = gaussian(0, half * 0.65);
           const dist = ringR + offset;

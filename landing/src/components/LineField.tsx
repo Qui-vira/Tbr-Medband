@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { EASE } from "@/lib/constants";
 
 type Variant = "hero" | "photographer" | "projects" | "marvels" | "marvelsBottom";
@@ -106,7 +106,7 @@ export function LineField({ variant = "hero" }: LineFieldProps) {
         const mx = (x1 + x2) / 2;
         const my = (y1 + y2) / 2;
         return (
-          <motion.line
+          <m.line
             key={i}
             x1={x1}
             y1={y1}
@@ -137,7 +137,7 @@ export function LineField({ variant = "hero" }: LineFieldProps) {
         const textOpacity = isHero ? 0.12 : 0.55;
 
         return (
-          <motion.g
+          <m.g
             key={i}
             initial={{ opacity: 0, scale: 0 }}
             whileInView={{ opacity: markerOpacity, scale: 1 }}
@@ -168,7 +168,7 @@ export function LineField({ variant = "hero" }: LineFieldProps) {
                 </tspan>
               ))}
             </text>
-          </motion.g>
+          </m.g>
         );
       })}
     </svg>

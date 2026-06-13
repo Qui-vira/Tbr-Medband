@@ -43,3 +43,39 @@ export const viewFadeUp = {
     transition: { duration: 1, delay, ease: EASE },
   }),
 };
+
+export const viewFadeIn = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { duration: 0.6, ease: EASE },
+  },
+};
+
+export const mobileCardIn = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { duration: 0.6, ease: EASE },
+  },
+};
+
+export const desktopCardIn = (delay = 0) => ({
+  hidden: { opacity: 0, y: 40, filter: "blur(12px)" },
+  show: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 1.1, delay, ease: EASE },
+  },
+});
+
+export const desktopStepIn = {
+  hidden: { opacity: 0, y: 60, filter: "blur(16px)" },
+  show: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 1.2, ease: EASE },
+  },
+};

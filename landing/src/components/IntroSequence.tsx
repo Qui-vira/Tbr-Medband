@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { useCallback, useEffect, useState } from "react";
+import { m, useReducedMotion } from "framer-motion";
 import { EASE } from "@/lib/constants";
 import { LogoMark } from "./LogoMark";
 
 const RAY_ANGLES = [0, 30, 60, 120, 150, 210, 240, 300, 330];
 const TOTAL_MS = 3600;
+const INTRO_SEEN_KEY = "medband_intro";
 
 function rayPath(angleDeg: number, length = 60) {
   const rad = (angleDeg * Math.PI) / 180;
@@ -13,24 +14,47 @@ function rayPath(angleDeg: number, length = 60) {
   return `M 50 50 L ${x2} ${y2}`;
 }
 
+function hasSeenIntro(): boolean {
+  try {
+    return sessionStorage.getItem(INTRO_SEEN_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
 export function IntroSequence() {
   const reduced = useReducedMotion();
-  const [hidden, setHidden] = useState(false);
+  const [hidden, setHidden] = useState(() => hasSeenIntro());
+  const [showSkip, setShowSkip] = useState(false);
   const duration = reduced ? 0.1 : TOTAL_MS / 1000;
 
+  const completeIntro = useCallback(() => {
+    try {
+      sessionStorage.setItem(INTRO_SEEN_KEY, "true");
+    } catch {
+      /* ignore storage errors */
+    }
+    setHidden(true);
+  }, []);
+
   useEffect(() => {
-    const t = setTimeout(() => setHidden(true), reduced ? 100 : TOTAL_MS);
-    return () => clearTimeout(t);
-  }, [reduced]);
+    if (hidden) return;
+    const skipTimer = setTimeout(() => setShowSkip(true), 500);
+    const endTimer = setTimeout(
+      () => completeIntro(),
+      reduced ? 100 : TOTAL_MS,
+    );
+    return () => {
+      clearTimeout(skipTimer);
+      clearTimeout(endTimer);
+    };
+  }, [hidden, reduced, completeIntro]);
 
   if (hidden) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[100] pointer-events-none"
-      aria-hidden
-    >
-      <motion.div
+    <div className="fixed inset-0 z-[100]" aria-hidden>
+      <m.div
         className="absolute inset-0 bg-[oklch(0.09_0.006_220)]"
         initial={{ opacity: 1 }}
         animate={{ opacity: reduced ? 0 : [1, 1, 0] }}
@@ -41,9 +65,9 @@ export function IntroSequence() {
         }}
       />
 
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         {[1, 2, 3].map((n, i) => (
-          <motion.div
+          <m.div
             key={n}
             className="absolute rounded-full border border-[var(--teal)]"
             style={{
@@ -68,7 +92,7 @@ export function IntroSequence() {
           style={{ width: "min(80vw, 400px)", height: "min(80vw, 400px)" }}
         >
           {RAY_ANGLES.map((angle, i) => (
-            <motion.path
+            <m.path
               key={angle}
               d={rayPath(angle)}
               fill="none"
@@ -88,7 +112,7 @@ export function IntroSequence() {
           ))}
         </svg>
 
-        <motion.div
+        <m.div
           className="absolute"
           style={{ top: "50%", left: "50%" }}
           initial={{ x: "-50%", y: "-50%", scale: 1 }}
@@ -105,7 +129,7 @@ export function IntroSequence() {
             ease: EASE,
           }}
         >
-          <motion.div
+          <m.div
             className="absolute rounded-full bg-[var(--teal)]"
             style={{ left: 32, top: 32, transform: "translate(-50%, -50%)" }}
             initial={{ width: 8, height: 8, opacity: 1 }}
@@ -121,7 +145,7 @@ export function IntroSequence() {
             }}
           />
 
-          <motion.div
+          <m.div
             className="overflow-hidden flex items-center"
             initial={{ width: 64, opacity: 0 }}
             animate={{
@@ -136,9 +160,19 @@ export function IntroSequence() {
             style={{ height: 64 }}
           >
             <LogoMark style={{ fontSize: "3rem", lineHeight: "64px" }} />
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       </div>
+
+      {showSkip && (
+        <button
+          type="button"
+          onClick={completeIntro}
+          className="fixed bottom-4 right-4 z-[101] text-xs text-white/40 hover:text-white transition"
+        >
+          Skip intro
+        </button>
+      )}
     </div>
   );
 }
