@@ -349,7 +349,7 @@ function HeroSection() {
       {HERO_CARDS.map((card, i) => (
         <motion.div
           key={card.alt}
-          className={`absolute z-20 ${card.position} ${card.size} group`}
+          className={`absolute z-[5] hidden lg:block ${card.position} ${card.size} group max-w-[min(280px,22vw)]`}
           variants={photoIn}
           initial="hidden"
           animate="show"
@@ -383,7 +383,7 @@ function HeroSection() {
         </motion.div>
       ))}
 
-      <div className="relative z-10 grid place-items-center min-h-[60vh] px-6 text-center max-w-3xl mx-auto">
+      <div className="relative z-10 grid place-items-center min-h-[60vh] px-6 md:px-8 text-center max-w-4xl mx-auto">
         <motion.div
           className="inline-flex items-center gap-2 rounded-full border border-teal/30 bg-teal/10 px-3 py-1 text-xs text-teal uppercase tracking-widest mb-8"
           initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
@@ -395,7 +395,7 @@ function HeroSection() {
         </motion.div>
 
         <motion.h1
-          className="font-display font-black text-6xl md:text-[90px] leading-[0.95] tracking-tight"
+          className="font-display font-black text-5xl md:text-6xl lg:text-7xl xl:text-[80px] 2xl:text-[90px] leading-[0.95] tracking-tight max-w-4xl"
           variants={blurIn}
           initial="hidden"
           animate="show"
@@ -548,7 +548,7 @@ function HowItWorks() {
         </motion.p>
       </div>
 
-      <div className="relative z-[2] max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="relative z-[2] max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
         {STEPS.map((step) => (
           <motion.div
             key={step.num}
@@ -574,7 +574,8 @@ function HowItWorks() {
         ))}
       </div>
 
-      <div className="relative z-[2] max-w-5xl mx-auto mt-16 flex items-start justify-between gap-0 px-4">
+      <div className="relative z-[2] max-w-5xl mx-auto mt-16 overflow-x-auto px-4">
+        <div className="flex items-start justify-between gap-0 min-w-[640px]">
         {TIMELINE_NODES.map((node, i) => (
           <div key={node} className="flex items-center flex-1 last:flex-none">
             <motion.div
@@ -594,6 +595,7 @@ function HowItWorks() {
             )}
           </div>
         ))}
+        </div>
       </div>
     </section>
   );
@@ -718,7 +720,7 @@ function SixSectors() {
         </div>
       </div>
 
-      <div className="relative z-[2] max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
+      <div className="relative z-[2] max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
         {SECTORS.map((sector, i) => (
           <motion.div
             key={sector.env}
@@ -743,12 +745,10 @@ function SixSectors() {
                 Demo Sector
               </span>
             )}
-            <div className="mt-4 flex items-center justify-between text-xs text-white/30">
-              <span>
-                ACTIVE_SECTOR=
-                <span className="text-teal font-mono">{sector.env}</span>
+            <div className="mt-4">
+              <span className="inline-flex rounded-full border border-teal/20 px-2 py-0.5 text-xs text-teal/60 font-mono bg-teal/5">
+                {sector.env}
               </span>
-              <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition" />
             </div>
           </motion.div>
         ))}
@@ -775,7 +775,7 @@ function BandIntegration() {
         <NoiseOverlay />
 
         <motion.h2
-          className="relative z-10 font-display font-medium uppercase text-5xl md:text-[80px] leading-[0.95] max-w-[1100px]"
+          className="relative z-10 font-display font-medium uppercase text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-[80px] leading-[0.95] max-w-[1100px] break-words"
           initial={{ opacity: 0, y: 40, filter: "blur(16px)" }}
           whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           viewport={{ once: true, margin: "-100px" }}

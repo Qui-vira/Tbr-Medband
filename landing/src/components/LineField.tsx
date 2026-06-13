@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { EASE } from "@/lib/constants";
 
@@ -72,10 +73,26 @@ function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
+function useDesktopMarkers() {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1025px)");
+    const update = () => setShow(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  return show;
+}
+
 export function LineField({ variant = "hero" }: LineFieldProps) {
   const lines = LINES[variant];
   const markers = MARKERS[variant] ?? [];
   const strokeOpacity = variant === "marvelsBottom" ? 0.22 : 0.1;
+  const showHeroMarkers = useDesktopMarkers();
+  const isHero = variant === "hero";
 
   return (
     <svg
@@ -108,31 +125,42 @@ export function LineField({ variant = "hero" }: LineFieldProps) {
       })}
 
       {markers.map((marker, i) => {
+        if (isHero && !showHeroMarkers) return null;
+
         const line = lines[marker.lineIndex];
         if (!line) return null;
         const [x1, y1, x2, y2] = line;
         const px = lerp(x1, x2, marker.t);
         const py = lerp(y1, y2, marker.t);
         const words = marker.label.split(" ");
+        const markerOpacity = isHero ? 0.15 : 1;
+        const textOpacity = isHero ? 0.12 : 0.55;
 
         return (
           <motion.g
             key={i}
             initial={{ opacity: 0, scale: 0 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            whileInView={{ opacity: markerOpacity, scale: 1 }}
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.8, delay: 1.2 + i * 0.25, ease: EASE }}
             style={{ transformOrigin: `${px}% ${py}%` }}
           >
-            <circle cx={px} cy={py} r={0.18} fill="white" fillOpacity={0.95} />
+            <circle
+              cx={px}
+              cy={py}
+              r={0.18}
+              fill="white"
+              fillOpacity={isHero ? 0.12 : 0.95}
+            />
             <text
               x={px + 0.5}
               y={py - 0.6}
               fill="white"
-              fillOpacity={0.55}
+              fillOpacity={textOpacity}
               fontSize={0.5}
               fontFamily="ui-monospace, monospace"
               letterSpacing="0.02em"
+              style={{ opacity: isHero ? 0.12 : undefined }}
             >
               {words.map((word, wi) => (
                 <tspan key={wi} x={px + 0.5} dy={wi === 0 ? 0 : "0.7em"}>
