@@ -188,15 +188,15 @@ def format_verification(payload: dict[str, Any]) -> str:
             )
         )
     clear_line = f"{drug or 'This request'} is cleared to proceed."
-    if reason:
+    if reason and "clear" not in reason.lower():
         clear_line = reason
     return strip_em_dash(
         "\n".join(
             [
-                "✅ CASE CLEAR",
+                "✅ VERIFICATION COMPLETE",
                 "",
-                f"Request: {drug or 'Unknown'}",
-                f"Result: {clear_line}",
+                "Verification:",
+                clear_line,
                 "No safety concern was found.",
                 "",
                 "Next Step:",
@@ -295,11 +295,13 @@ def format_case_ready(payload: dict[str, Any], case_id: str) -> str:
                 recommended,
                 "",
                 "Human Decision Required:",
-                "Please reply with one option:",
+                "To approve this case, type:",
                 "",
                 "APPROVE",
+                "",
+                "To reject this case, type:",
+                "",
                 "REJECT: [reason]",
-                "MORE INFO: [what you need]",
                 "",
                 "Important:",
                 "No AI has approved this case. Final approval must come from the pharmacist.",
@@ -474,11 +476,13 @@ def evaluate_outbound(
     content: str,
     *,
     room_id: str,
+    recipient: str = "room",
+    case_id_hint: str | None = None,
 ) -> OutboundDecision:
     content = strip_em_dash(content or "")
     payload = try_parse_json_payload(content)
     stage = detect_stage(content, payload)
-    case_id = extract_case_id(content) or (payload or {}).get("case_id")
+    case_id = extract_case_id(content) or (payload or {}).get("case_id") or case_id_hint
     if isinstance(case_id, str):
         case_id = case_id.upper()
 
@@ -492,17 +496,13 @@ def evaluate_outbound(
             )
             return OutboundDecision(skip=True, reason="false_human_alert", case_id=case_id)
 
-    if stage and case_id and stage in TRACKED_STAGES and stage_completed(case_id, stage):
-        logger.info(
-            "SKIP outbound: duplicate_stage agent=%s stage=%s case_id=%s room=%s",
-            agent_role,
-            stage,
-            case_id,
-            room_id,
-        )
-        return OutboundDecision(skip=True, reason="duplicate_stage", stage=stage, case_id=case_id)
-
-    if agent_role != "coordinator" and stage in {"VERIFY_REQUEST", "RESOURCE_REQUEST", "CASE_OPENED", "CASE_READY", "HUMAN_ALERT"}:
+    if agent_role != "coordinator" and stage in {
+        "VERIFY_REQUEST",
+        "RESOURCE_REQUEST",
+        "CASE_OPENED",
+        "CASE_READY",
+        "HUMAN_ALERT",
+    }:
         logger.info(
             "SKIP outbound: invalid_routing agent=%s stage=%s case_id=%s",
             agent_role,
@@ -513,6 +513,34 @@ def evaluate_outbound(
 
     if agent_role == "resource" and stage and "VERIFY" in stage:
         return OutboundDecision(skip=True, reason="invalid_routing", stage=stage, case_id=case_id)
+
+    if stage and case_id and stage in TRACKED_STAGES:
+        from core.case_state import try_claim_outbound
+
+        if not try_claim_outbound(
+            case_id,
+            stage,
+            agent_role,
+            recipient,
+            room_id=room_id,
+            payload=payload,
+        ):
+            logger.info(
+                "SKIP outbound: duplicate_stage agent=%s stage=%s case_id=%s sender=%s recipient=%s room=%s",
+                agent_role,
+                stage,
+                case_id,
+                agent_role,
+                recipient,
+                room_id,
+            )
+            return OutboundDecision(
+                skip=True,
+                reason="duplicate_stage",
+                stage=stage,
+                case_id=case_id,
+            )
+        record_stage(case_id, stage, payload=payload, room_id=room_id)
 
     if payload and stage and stage not in ROUTING_ONLY_STAGES:
         formatted = format_stage_message(stage, payload, case_id or "")
@@ -533,23 +561,41 @@ def evaluate_outbound(
         )
         return OutboundDecision(skip=True, reason="raw_json_blocked", case_id=case_id)
 
-    if stage in ROUTING_ONLY_STAGES and case_id and stage_completed(case_id, stage):
-        return OutboundDecision(skip=True, reason="duplicate_stage", stage=stage, case_id=case_id)
-
     return OutboundDecision(
         formatted_content=content if content else None,
         stage=stage,
         case_id=case_id,
-        record_on_success=bool(stage and case_id and stage in TRACKED_STAGES),
+        record_on_success=False,
     )
+
+
+def extract_recipient(tool_input: dict[str, Any]) -> str:
+    mentions = tool_input.get("mentions")
+    if isinstance(mentions, list) and mentions:
+        first = mentions[0]
+        if isinstance(first, dict):
+            for key in ("handle", "name", "id"):
+                val = first.get(key)
+                if isinstance(val, str) and val.strip():
+                    return val.strip().lower()
+        if isinstance(first, str):
+            handle = first.lower()
+            if "/" in handle:
+                return handle.split("/")[-1]
+            return handle.lstrip("@")
+    content = tool_input.get("content", "")
+    upper = content.upper()
+    for handle in (
+        "@MEDLABBYTBR/INTAKE",
+        "@MEDLABBYTBR/VERIFICATION",
+        "@MEDLABBYTBR/RESOURCE",
+        "@MEDLABBYTBR/COORDINATOR",
+    ):
+        if handle in upper:
+            return handle.split("/")[-1].lower()
+    return "room"
 
 
 def record_outbound_success(decision: OutboundDecision, payload: dict[str, Any] | None, room_id: str) -> None:
-    if not decision.record_on_success or not decision.stage or not decision.case_id:
-        return
-    record_stage(
-        decision.case_id,
-        decision.stage,
-        payload=payload,
-        room_id=room_id,
-    )
+    """Legacy hook; stage recording now happens at claim time in evaluate_outbound."""
+    return

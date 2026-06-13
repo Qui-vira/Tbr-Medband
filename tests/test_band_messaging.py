@@ -2,16 +2,30 @@
 import json
 from datetime import datetime, timezone
 
+import pytest
 from band.core.types import PlatformMessage
 
 from core.band_messaging import (
     evaluate_outbound,
+    extract_recipient,
     format_case_opened,
     is_visible_json,
     should_skip_inbound,
     strip_em_dash,
 )
-from core.case_state import record_stage
+from core.case_state import init_case_state, record_stage, try_claim_outbound
+
+
+@pytest.fixture(autouse=True)
+def isolated_store(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("MEDBAND_DATA_DIR", str(tmp_path))
+    import core.case_store as store
+
+    store.DATA_DIR = tmp_path
+    store.SQLITE_PATH = tmp_path / "medband_state.db"
+    store._pg_pool = None
+    init_case_state()
 
 
 def _msg(content: str, sender: str = "Coordinator") -> PlatformMessage:
@@ -48,22 +62,16 @@ def test_format_case_opened():
     assert "—" not in text
 
 
-def test_duplicate_stage_blocked(tmp_path, monkeypatch):
-    import core.case_state as cs
-
-    monkeypatch.setattr(cs, "CASES_DIR", tmp_path)
+def test_duplicate_stage_blocked():
     case_id = "TEST1234"
-    record_stage(case_id, "CASE_OPENED", payload={"case_id": case_id})
+    assert try_claim_outbound(case_id, "CASE_OPENED", "coordinator", "room")
     raw = json.dumps({"status": "CASE_OPENED", "case_id": case_id})
     decision = evaluate_outbound("coordinator", raw, room_id="room1")
     assert decision.skip is True
     assert decision.reason == "duplicate_stage"
 
 
-def test_false_human_alert_blocked(tmp_path, monkeypatch):
-    import core.case_state as cs
-
-    monkeypatch.setattr(cs, "CASES_DIR", tmp_path)
+def test_false_human_alert_blocked():
     case_id = "TEST5678"
     record_stage(case_id, "CASE_CLEAR", payload={"status": "CASE_CLEAR", "case_id": case_id})
     raw = json.dumps({"status": "HUMAN_ALERT", "case_id": case_id, "reason": "oops"})
@@ -82,10 +90,7 @@ def test_intake_ignores_non_coordinator():
     assert reason == "wrong_recipient"
 
 
-def test_json_replaced_with_formatted_message(tmp_path, monkeypatch):
-    import core.case_state as cs
-
-    monkeypatch.setattr(cs, "CASES_DIR", tmp_path)
+def test_json_replaced_with_formatted_message():
     payload = {
         "status": "INTAKE_COMPLETE",
         "case_id": "NEWCASE1",
@@ -99,3 +104,10 @@ def test_json_replaced_with_formatted_message(tmp_path, monkeypatch):
     assert decision.formatted_content is not None
     assert "INTAKE COMPLETE" in decision.formatted_content
     assert is_visible_json(json.dumps(payload)) is True
+
+
+def test_extract_recipient_from_mentions():
+    recipient = extract_recipient(
+        {"content": "verify this", "mentions": ["@medlabbytbr/verification"]}
+    )
+    assert recipient == "verification"

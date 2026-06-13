@@ -16,11 +16,18 @@ from band.runtime.prompts import render_system_prompt
 from core.band_messaging import (
     SEND_MESSAGE_TOOLS,
     evaluate_outbound,
+    extract_recipient,
     record_outbound_success,
     should_skip_inbound,
     strip_em_dash,
 )
-from core.case_state import extract_case_id, try_parse_json_payload
+from core.case_state import (
+    extract_case_id,
+    init_case_state,
+    resolve_case_id,
+    try_claim_inbound,
+    try_parse_json_payload,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -236,6 +243,7 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
             features=self.features,
         )
         logger.info("AIML OpenAI adapter started for agent: %s (role=%s)", agent_name, self.agent_role)
+        init_case_state()
 
     async def _execute_tool(
         self,
@@ -243,13 +251,17 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
         tool_name: str,
         tool_input: dict[str, Any],
         room_id: str,
+        case_id: str | None,
     ) -> tuple[Any, bool]:
         if tool_name in SEND_MESSAGE_TOOLS:
             content = tool_input.get("content", "")
+            recipient = extract_recipient(tool_input)
             decision = evaluate_outbound(
                 self.agent_role,
                 content,
                 room_id=room_id,
+                recipient=recipient,
+                case_id_hint=case_id,
             )
             if decision.skip:
                 return (
@@ -286,7 +298,7 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
         from agents._band import apply_sector_from_message
 
         apply_sector_from_message({"content": msg.content})
-        case_id = extract_case_id(msg.content or "")
+        case_id = resolve_case_id(msg.content or "", room_id)
         skip, reason = should_skip_inbound(
             self.agent_role,
             msg,
@@ -299,6 +311,16 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
                 self.agent_role,
                 msg.id,
                 case_id,
+            )
+            return
+
+        if not try_claim_inbound(self.agent_role, room_id, msg.id, case_id=case_id):
+            logger.info(
+                "Skipped message processing: reason=already_processed agent=%s msg_id=%s case_id=%s room=%s",
+                self.agent_role,
+                msg.id,
+                case_id,
+                room_id,
             )
             return
 
@@ -321,6 +343,13 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
         self._message_history[room_id].append(
             {"role": "user", "content": strip_em_dash(msg.format_for_llm())}
         )
+        if case_id:
+            self._message_history[room_id].append(
+                {
+                    "role": "user",
+                    "content": f"[System]: Active case_id for this room is {case_id}. Reuse it for every stage.",
+                }
+            )
 
         include_memory = Capability.MEMORY in self.features.capabilities
         include_contacts = Capability.CONTACTS in self.features.capabilities
@@ -406,7 +435,7 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
 
                 try:
                     result, is_error_override = await self._execute_tool(
-                        tools, tool_name, tool_input, room_id
+                        tools, tool_name, tool_input, room_id, case_id
                     )
                     if isinstance(result, dict) and result.get("status") == "skipped":
                         result_str = json.dumps(result, default=str)

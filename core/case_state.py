@@ -1,17 +1,14 @@
-"""Persistent idempotency and workflow state for Band cases."""
+"""Case workflow helpers built on shared case_store."""
 from __future__ import annotations
 
 import json
 import logging
 import re
-import threading
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger(__name__)
+from core import case_store
 
-CASES_DIR = Path(__file__).resolve().parent.parent / "cases"
+logger = logging.getLogger(__name__)
 
 TRACKED_STAGES = frozenset(
     {
@@ -31,42 +28,20 @@ TRACKED_STAGES = frozenset(
 )
 
 TERMINAL_STAGES = frozenset({"CASE_READY", "HUMAN_ALERT", "CASE_REJECTED", "CASE_APPROVED"})
-
 VERIFICATION_OUTCOMES = frozenset({"CASE_CLEAR", "CASE_CAUTION", "CASE_ESCALATE"})
 
-_lock = threading.Lock()
 
-
-def _case_path(case_id: str) -> Path:
-    CASES_DIR.mkdir(parents=True, exist_ok=True)
-    return CASES_DIR / f"{case_id}.json"
-
-
-def _load_raw(case_id: str) -> dict[str, Any]:
-    path = _case_path(case_id)
-    if not path.exists():
-        return {"case_id": case_id}
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError) as exc:
-        logger.warning("Could not read case state for %s: %s", case_id, exc)
-        return {"case_id": case_id}
-
-
-def _save_raw(case_id: str, data: dict[str, Any]) -> None:
-    path = _case_path(case_id)
-    path.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
+def init_case_state() -> None:
+    case_store.init_store()
+    logger.info("Case state backend: %s", case_store.backend_name())
 
 
 def get_case_state(case_id: str) -> dict[str, Any]:
-    with _lock:
-        return _load_raw(case_id)
+    return case_store.get_case_state(case_id)
 
 
 def completed_stages(case_id: str) -> set[str]:
-    state = get_case_state(case_id)
-    stages = state.get("completed_stages", [])
-    return set(stages) if isinstance(stages, list) else set()
+    return case_store.completed_stages(case_id)
 
 
 def stage_completed(case_id: str, stage: str) -> bool:
@@ -97,36 +72,46 @@ def record_stage(
     payload: dict[str, Any] | None = None,
     room_id: str | None = None,
 ) -> None:
-    if not case_id or not stage:
-        return
-    with _lock:
-        data = _load_raw(case_id)
-        stages = data.setdefault("completed_stages", [])
-        if not isinstance(stages, list):
-            stages = []
-            data["completed_stages"] = stages
-        if stage not in stages:
-            stages.append(stage)
-        data["case_id"] = case_id
-        data["last_stage"] = stage
-        data["updated_at"] = datetime.now(timezone.utc).isoformat()
-        if room_id:
-            data["band_room_id"] = room_id
-        if payload:
-            if stage == "INTAKE_COMPLETE" or stage == "INTAKE_INCOMPLETE":
-                data["intake"] = payload
-            elif stage in VERIFICATION_OUTCOMES:
-                data["verification"] = payload
-                data["verification_status"] = stage
-            elif stage == "RESOURCE_COMPLETE":
-                data["resource"] = payload
-            elif stage == "CASE_OPENED":
-                data.setdefault("opened", payload)
-            elif stage == "CASE_READY":
-                data["status"] = "CASE_READY"
-                data["summary"] = payload
-        _save_raw(case_id, data)
-        logger.info("Recorded stage %s for case %s", stage, case_id)
+    case_store.record_stage(case_id, stage, payload=payload, room_id=room_id)
+    logger.info("Recorded stage %s for case %s", stage, case_id)
+
+
+def resolve_case_id(text: str, room_id: str) -> str | None:
+    case_id = extract_case_id(text)
+    if case_id:
+        case_store.assign_room_case_id(room_id, case_id, content_fingerprint=text[:256])
+        return case_id
+    return case_store.get_room_case_id(room_id) or case_store.stable_case_id_for_room(
+        room_id, seed_text=text[:512]
+    )
+
+
+def try_claim_outbound(
+    case_id: str,
+    stage: str,
+    sender: str,
+    recipient: str,
+    *,
+    room_id: str | None = None,
+    payload: dict[str, Any] | None = None,
+) -> bool:
+    return case_store.try_claim_idempotency(
+        case_id,
+        stage,
+        sender,
+        recipient,
+        room_id=room_id,
+        payload=payload,
+    )
+
+
+def try_claim_inbound(agent_role: str, room_id: str, message_id: str, case_id: str | None = None) -> bool:
+    return case_store.try_claim_processed_message(
+        agent_role,
+        room_id,
+        message_id,
+        case_id=case_id,
+    )
 
 
 def extract_case_id(text: str) -> str | None:
@@ -141,6 +126,7 @@ def extract_case_id(text: str) -> str | None:
         r'"case_id"\s*:\s*"([^"]+)"',
         r"Case ID:\s*([A-Z0-9-]+)",
         r"case_id[=:\s]+([A-Z0-9-]+)",
+        r"\bMB-[A-F0-9]{8}\b",
         r"MEDBAND-[A-Z0-9-]+",
     ):
         match = re.search(pattern, text, re.IGNORECASE)
@@ -181,6 +167,7 @@ def detect_stage(text: str, payload: dict[str, Any] | None = None) -> str | None
     upper = text.upper()
     formatted_aliases = {
         "INTAKE COMPLETE": "INTAKE_COMPLETE",
+        "VERIFICATION COMPLETE": "CASE_CLEAR",
         "CASE CLEAR": "CASE_CLEAR",
         "VERIFICATION CAUTION": "CASE_CAUTION",
         "VERIFICATION ESCALATION": "CASE_ESCALATE",
