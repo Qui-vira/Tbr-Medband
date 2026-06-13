@@ -23,8 +23,10 @@ from core.band_messaging import (
 )
 from core.case_state import (
     build_coordinator_workflow_context,
+    disable_room_for_band_limit,
     extract_case_id,
     init_case_state,
+    is_room_disabled,
     resolve_case_id,
     try_claim_inbound,
     try_parse_json_payload,
@@ -35,8 +37,10 @@ logger = logging.getLogger(__name__)
 OpenAIMessages = list[dict[str, Any]]
 
 
-def _patch_orphaned_tool_calls(messages: OpenAIMessages) -> None:
+def _patch_orphaned_tool_calls(messages: OpenAIMessages, *, room_id: str | None = None) -> None:
     """Inject synthetic tool results for assistant tool_calls missing responses."""
+    if room_id and is_room_disabled(room_id):
+        return
     i = 0
     while i < len(messages):
         msg = messages[i]
@@ -81,8 +85,14 @@ def _patch_orphaned_tool_calls(messages: OpenAIMessages) -> None:
         i += 1
 
 
-def _sanitize_openai_messages(messages: OpenAIMessages) -> OpenAIMessages:
+def _sanitize_openai_messages(
+    messages: OpenAIMessages,
+    *,
+    room_id: str | None = None,
+) -> OpenAIMessages:
     """Remove or repair message sequences AIML rejects."""
+    if room_id and is_room_disabled(room_id):
+        return messages
     sanitized: OpenAIMessages = []
 
     for msg in messages:
@@ -115,7 +125,7 @@ def _sanitize_openai_messages(messages: OpenAIMessages) -> OpenAIMessages:
 
         sanitized.append(msg)
 
-    _patch_orphaned_tool_calls(sanitized)
+    _patch_orphaned_tool_calls(sanitized, room_id=room_id)
     return sanitized
 
 
@@ -124,11 +134,18 @@ class OpenAIHistoryConverter(HistoryConverter[OpenAIMessages]):
 
     def __init__(self, agent_name: str = ""):
         self._agent_name = agent_name
+        self._active_room_id: str | None = None
 
     def set_agent_name(self, name: str) -> None:
         self._agent_name = name
 
+    def set_active_room(self, room_id: str | None) -> None:
+        self._active_room_id = room_id
+
     def convert(self, raw: list[dict[str, Any]]) -> OpenAIMessages:
+        skip_tool_events = bool(
+            self._active_room_id and is_room_disabled(self._active_room_id)
+        )
         messages: OpenAIMessages = []
         pending_tool_calls: list[dict[str, Any]] = []
         pending_tool_results: list[dict[str, Any]] = []
@@ -154,6 +171,9 @@ class OpenAIHistoryConverter(HistoryConverter[OpenAIMessages]):
         for hist in raw:
             message_type = hist.get("message_type", "text")
             content = hist.get("content", "")
+
+            if skip_tool_events and message_type in {"tool_call", "tool_result"}:
+                continue
 
             if message_type == "tool_call":
                 flush_tool_results()
@@ -202,7 +222,7 @@ class OpenAIHistoryConverter(HistoryConverter[OpenAIMessages]):
 
         flush_tool_calls()
         flush_tool_results()
-        return _sanitize_openai_messages(messages)
+        return _sanitize_openai_messages(messages, room_id=self._active_room_id)
 
 
 class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
@@ -246,6 +266,35 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
         logger.info("AIML OpenAI adapter started for agent: %s (role=%s)", agent_name, self.agent_role)
         init_case_state()
 
+    def _log_ignoring_room(self, room_id: str) -> None:
+        logger.info("Ignoring room due to Band message limit: %s", room_id)
+
+    def _handle_band_limit(self, room_id: str, exc: BaseException) -> bool:
+        if disable_room_for_band_limit(room_id, exc):
+            self._log_ignoring_room(room_id)
+            self._message_history.pop(room_id, None)
+            return True
+        return False
+
+    async def _send_execution_event(
+        self,
+        tools: AgentToolsProtocol,
+        room_id: str,
+        *,
+        content: str,
+        message_type: str,
+    ) -> bool:
+        """Send tool_call/tool_result events unless the room hit Band's message limit."""
+        if is_room_disabled(room_id):
+            return True
+        try:
+            await tools.send_event(content=content, message_type=message_type)
+        except Exception as exc:
+            if self._handle_band_limit(room_id, exc):
+                return False
+            logger.warning("Failed to send %s event: %s", message_type, exc)
+        return True
+
     async def _execute_tool(
         self,
         tools: AgentToolsProtocol,
@@ -277,12 +326,36 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
             payload = try_parse_json_payload(content)
             if decision.formatted_content:
                 tool_input = {**tool_input, "content": decision.formatted_content}
-            result = await tools.execute_tool_call(tool_name, tool_input)
+            try:
+                result = await tools.execute_tool_call(tool_name, tool_input)
+            except Exception as exc:
+                if self._handle_band_limit(room_id, exc):
+                    return (
+                        {
+                            "status": "skipped",
+                            "reason": "room_limit_reached",
+                            "case_id": case_id,
+                        },
+                        False,
+                    )
+                raise
             if not decision.skip:
                 record_outbound_success(decision, payload, room_id)
             return result, False
 
-        result = await tools.execute_tool_call(tool_name, tool_input)
+        try:
+            result = await tools.execute_tool_call(tool_name, tool_input)
+        except Exception as exc:
+            if self._handle_band_limit(room_id, exc):
+                return (
+                    {
+                        "status": "skipped",
+                        "reason": "room_limit_reached",
+                        "case_id": case_id,
+                    },
+                    False,
+                )
+            raise
         return result, False
 
     async def on_message(
@@ -297,6 +370,14 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
         room_id: str,
     ) -> None:
         from agents._band import apply_sector_from_message
+
+        if isinstance(self._history_converter, OpenAIHistoryConverter):
+            self._history_converter.set_active_room(room_id)
+
+        if is_room_disabled(room_id):
+            self._log_ignoring_room(room_id)
+            try_claim_inbound(self.agent_role, room_id, msg.id, case_id=None)
+            return
 
         apply_sector_from_message({"content": msg.content})
         case_id = resolve_case_id(msg.content or "", room_id)
@@ -327,7 +408,7 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
 
         if is_session_bootstrap:
             self._message_history[room_id] = (
-                _sanitize_openai_messages(list(history)) if history else []
+                _sanitize_openai_messages(list(history), room_id=room_id) if history else []
             )
         elif room_id not in self._message_history:
             self._message_history[room_id] = []
@@ -366,9 +447,12 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
             include_contacts=include_contacts,
         )
 
-        api_messages = _sanitize_openai_messages(self._message_history[room_id])
+        api_messages = _sanitize_openai_messages(self._message_history[room_id], room_id=room_id)
 
         while True:
+            if is_room_disabled(room_id):
+                self._log_ignoring_room(room_id)
+                return
             try:
                 request_kwargs: dict[str, Any] = {
                     "model": self.model,
@@ -427,24 +511,26 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
                 tool_call_id = tool_call.id
 
                 if Emit.EXECUTION in self.features.emit:
-                    try:
-                        await tools.send_event(
-                            content=json.dumps(
-                                {
-                                    "name": tool_name,
-                                    "args": tool_input,
-                                    "tool_call_id": tool_call_id,
-                                }
-                            ),
-                            message_type="tool_call",
-                        )
-                    except Exception as exc:
-                        logger.warning("Failed to send tool_call event: %s", exc)
+                    if not await self._send_execution_event(
+                        tools,
+                        room_id,
+                        content=json.dumps(
+                            {
+                                "name": tool_name,
+                                "args": tool_input,
+                                "tool_call_id": tool_call_id,
+                            }
+                        ),
+                        message_type="tool_call",
+                    ):
+                        return
 
                 try:
                     result, is_error_override = await self._execute_tool(
                         tools, tool_name, tool_input, room_id, case_id
                     )
+                    if isinstance(result, dict) and result.get("reason") == "room_limit_reached":
+                        return
                     if isinstance(result, dict) and result.get("status") == "skipped":
                         result_str = json.dumps(result, default=str)
                         is_error = False
@@ -461,20 +547,20 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
                     logger.error("Tool %s failed: %s", tool_name, exc)
 
                 if Emit.EXECUTION in self.features.emit:
-                    try:
-                        await tools.send_event(
-                            content=json.dumps(
-                                {
-                                    "name": tool_name,
-                                    "output": result_str,
-                                    "tool_call_id": tool_call_id,
-                                    "is_error": is_error,
-                                }
-                            ),
-                            message_type="tool_result",
-                        )
-                    except Exception as exc:
-                        logger.warning("Failed to send tool_result event: %s", exc)
+                    if not await self._send_execution_event(
+                        tools,
+                        room_id,
+                        content=json.dumps(
+                            {
+                                "name": tool_name,
+                                "output": result_str,
+                                "tool_call_id": tool_call_id,
+                                "is_error": is_error,
+                            }
+                        ),
+                        message_type="tool_result",
+                    ):
+                        return
 
                 tool_entry = {
                     "role": "tool",

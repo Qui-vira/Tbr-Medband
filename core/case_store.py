@@ -80,6 +80,11 @@ CREATE TABLE IF NOT EXISTS case_stages (
 );
 CREATE INDEX IF NOT EXISTS idx_idempotency_case ON idempotency_keys(case_id);
 CREATE INDEX IF NOT EXISTS idx_processed_room ON processed_messages(room_id);
+CREATE TABLE IF NOT EXISTS disabled_rooms (
+    room_id TEXT PRIMARY KEY,
+    reason TEXT NOT NULL,
+    disabled_at TEXT NOT NULL
+);
 """
 
 SCHEMA_POSTGRES = """
@@ -117,6 +122,11 @@ CREATE TABLE IF NOT EXISTS case_stages (
 );
 CREATE INDEX IF NOT EXISTS idx_idempotency_case ON idempotency_keys(case_id);
 CREATE INDEX IF NOT EXISTS idx_processed_room ON processed_messages(room_id);
+CREATE TABLE IF NOT EXISTS disabled_rooms (
+    room_id TEXT PRIMARY KEY,
+    reason TEXT NOT NULL,
+    disabled_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 """
 
 
@@ -412,6 +422,56 @@ def get_stage_payload(case_id: str, stage: str) -> dict[str, Any] | None:
         if not row or not row[0]:
             return None
         return json.loads(row[0])
+
+
+ROOM_LIMIT_REASON = "max_messages_per_room_count"
+
+
+def disable_room(room_id: str, reason: str = ROOM_LIMIT_REASON) -> None:
+    if not room_id:
+        return
+    now = _utcnow()
+    with _lock:
+        with _connection() as conn:
+            if DATABASE_URL:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO disabled_rooms (room_id, reason, disabled_at)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (room_id) DO UPDATE
+                            SET reason = EXCLUDED.reason, disabled_at = EXCLUDED.disabled_at
+                        """,
+                        (room_id, reason, now),
+                    )
+            else:
+                cur = conn.cursor()
+                cur.execute(
+                    """
+                    INSERT INTO disabled_rooms (room_id, reason, disabled_at)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT (room_id) DO UPDATE SET
+                        reason = excluded.reason,
+                        disabled_at = excluded.disabled_at
+                    """,
+                    (room_id, reason, now),
+                )
+
+
+def is_room_disabled(room_id: str) -> bool:
+    if not room_id:
+        return False
+    with _connection() as conn:
+        if DATABASE_URL:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT 1 FROM disabled_rooms WHERE room_id = %s",
+                    (room_id,),
+                )
+                return cur.fetchone() is not None
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM disabled_rooms WHERE room_id = ?", (room_id,))
+        return cur.fetchone() is not None
 
 
 def get_case_state(case_id: str) -> dict[str, Any]:

@@ -35,7 +35,38 @@ VERIFICATION_OUTCOMES = frozenset({"CASE_CLEAR", "CASE_CAUTION", "CASE_ESCALATE"
 
 def init_case_state() -> None:
     case_store.init_store()
-    logger.info("Case state backend: %s", case_store.backend_name())
+
+
+def is_band_message_limit_error(exc: BaseException) -> bool:
+    parts: list[str] = [str(exc)]
+    for attr in ("body", "text", "message"):
+        val = getattr(exc, attr, None)
+        if isinstance(val, str) and val.strip():
+            parts.append(val)
+    response = getattr(exc, "response", None)
+    if response is not None:
+        for attr in ("text", "body", "content"):
+            val = getattr(response, attr, None)
+            if isinstance(val, str) and val.strip():
+                parts.append(val)
+    blob = " ".join(parts).lower()
+    return (
+        "limit_reached" in blob
+        or "max_messages_per_room_count" in blob
+        or "max_messages_per_room" in blob
+    )
+
+
+def disable_room_for_band_limit(room_id: str, exc: BaseException) -> bool:
+    """Persist room disable when Band returns a message-limit error."""
+    if not room_id or not is_band_message_limit_error(exc):
+        return False
+    case_store.disable_room(room_id, case_store.ROOM_LIMIT_REASON)
+    return True
+
+
+def is_room_disabled(room_id: str) -> bool:
+    return case_store.is_room_disabled(room_id)
 
 
 def get_case_state(case_id: str) -> dict[str, Any]:
