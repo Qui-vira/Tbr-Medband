@@ -1,0 +1,10 @@
+venv/
+.venv/
+env/
+__pycache__/
+cases/
+_band_version_tests/
+.git/
+*.pyc
+.env
+agent_config.yaml
