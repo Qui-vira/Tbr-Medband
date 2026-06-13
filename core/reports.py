@@ -9,7 +9,8 @@ def build_patient_report(case: dict) -> dict:
     resource = case.get("resource", {})
     decision = case.get("decision", {}) or {}
     human_decision = case.get("human_decision", {})
-    status = case.get("status", "UNKNOWN")    name = intake.get("requester_name") or intake.get("caller_name") or "Requester"
+    status = case.get("status", "UNKNOWN")
+    name = intake.get("requester_name") or intake.get("caller_name") or "Requester"
     service = intake.get("requested_service", "")
 
     lines = [
