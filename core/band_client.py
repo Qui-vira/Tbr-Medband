@@ -1,5 +1,4 @@
 """Band REST API client for web form → Coordinator routing."""
-import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,33 +14,23 @@ def get_coordinator_handle() -> str:
 
 
 def _band_credentials() -> tuple[str, str]:
-    """API key + agent id for the web sender (must not be the Coordinator)."""
+    """API key + agent id for the web sender.
+
+    The web form must post NEW_CASE_FROM_WEB under a dedicated web/system Band
+    identity, never under a workflow agent (Intake/Verification/Resource). Posting
+    as Intake makes the case look like it came from the Intake agent and corrupts
+    Coordinator routing. We require WEB_BAND_* explicitly and never fall back to a
+    workflow agent's credentials.
+    """
     web_key = os.environ.get("WEB_BAND_API_KEY")
     web_id = os.environ.get("WEB_BAND_AGENT_ID")
     if web_key and web_id:
         return web_id, web_key
 
-    for agent_name in ("intake", "verification", "resource"):
-        prefix = agent_name.upper()
-        agent_id = os.environ.get(f"{prefix}_AGENT_ID")
-        api_key = os.environ.get(f"{prefix}_API_KEY")
-        if agent_id and api_key:
-            return agent_id, api_key
-
-    try:
-        from agents._band import get_agent_credentials
-
-        for agent_name in ("intake", "verification", "resource"):
-            try:
-                return get_agent_credentials(agent_name)
-            except ValueError:
-                continue
-    except ImportError:
-        pass
-
     raise ValueError(
-        "Band web sender credentials missing. Set INTAKE_AGENT_ID and INTAKE_API_KEY "
-        "(or WEB_BAND_AGENT_ID / WEB_BAND_API_KEY)."
+        "Web Band sender identity is not configured. Set WEB_BAND_AGENT_ID and "
+        "WEB_BAND_API_KEY to a dedicated web/system Band agent. Do not reuse the "
+        "Intake, Verification, or Resource agent identity for web submissions."
     )
 
 
@@ -58,6 +47,8 @@ def _coordinator_agent_id() -> str:
 
 
 def _format_new_case_message(case_payload: dict) -> str:
+    # Clean, human-readable only. Never post raw JSON into the Band room.
+    prescription_code = case_payload.get("prescription_code") or "none"
     return f"""@{COORDINATOR_HANDLE} NEW_CASE_FROM_WEB
 
 Sector: {case_payload.get("sector")}
@@ -66,12 +57,12 @@ Institution ID: {case_payload.get("institution_id")}
 Case ID: {case_payload.get("case_id")}
 
 Patient: {case_payload.get("patient_name")}
-Request: {case_payload.get("raw_input")}
+Presenting issue: {case_payload.get("presenting_issue")}
+Requested service: {case_payload.get("requested_service")}
 Urgency: {case_payload.get("urgency", "medium")}
+Prescription code: {prescription_code}
 
-```json
-{json.dumps(case_payload, indent=2)}
-```"""
+Route this case through Intake, then Verification, then Resource, then post CASE_READY."""
 
 
 def save_pending_case(case_payload: dict) -> dict:

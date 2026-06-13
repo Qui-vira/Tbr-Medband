@@ -127,6 +127,12 @@ def _form_urgency(data, sector: str) -> str:
     return data.get("urgency") or defaults.get(sector, "medium")
 
 
+def _form_requested_service(data, sector: str) -> str:
+    if sector == "emergency":
+        return data.get("emergency_type") or data.get("service", "")
+    return data.get("service", "")
+
+
 def _build_band_case_payload(data, raw_input: str, sector: str) -> dict:
     institution_id = data.get("institution_id") or None
     institution = get_institution(sector, institution_id) if institution_id else None
@@ -138,6 +144,12 @@ def _build_band_case_payload(data, raw_input: str, sector: str) -> dict:
         "institution_id": institution_id,
         "institution_name": (institution or {}).get("name"),
         "patient_name": _form_patient_name(data),
+        # Structured fields preserved from the web form so the Coordinator can
+        # forward them to Intake verbatim (presenting_issue must not become
+        # "Not specified", requested_service must stay intact).
+        "presenting_issue": data.get("issue", ""),
+        "requested_service": _form_requested_service(data, sector),
+        "prescription_code": data.get("prescription_code", ""),
         "raw_input": raw_input,
         "urgency": _form_urgency(data, sector),
         "source": "web_form",
