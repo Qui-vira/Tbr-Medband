@@ -25,7 +25,6 @@ from core.case_state import (
     build_coordinator_workflow_context,
     disable_room_for_band_limit,
     extract_case_id,
-    init_case_state,
     is_room_disabled,
     resolve_case_id,
     try_claim_inbound,
@@ -264,7 +263,6 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
             features=self.features,
         )
         logger.info("AIML OpenAI adapter started for agent: %s (role=%s)", agent_name, self.agent_role)
-        init_case_state()
 
     def _log_ignoring_room(self, room_id: str) -> None:
         message = f"Ignoring room due to Band message limit: {room_id}"
