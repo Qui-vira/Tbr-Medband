@@ -36,10 +36,10 @@ logger = logging.getLogger(__name__)
 
 OpenAIMessages = list[dict[str, Any]]
 
-CASE_READY_HUMAN_MENTION = {
-    "id": os.getenv("HUMAN_APPROVER_BAND_ID", "9347ae14-1872-4b98-91b8-430bfbcb8fd7"),
-    "handle": os.getenv("HUMAN_APPROVER_BAND_HANDLE", "medlabbytbr").lstrip("@"),
-    "name": os.getenv("HUMAN_APPROVER_BAND_NAME", "Kehinde-David Damilare"),
+CASE_READY_APPROVAL_DESK_MENTION = {
+    "id": os.getenv("APPROVAL_DESK_BAND_ID", "9799faf8-c045-4bd1-8e65-3e51f52fe73e"),
+    "handle": os.getenv("APPROVAL_DESK_BAND_HANDLE", "medlabbytbr/medband-approval-desk").lstrip("@"),
+    "name": os.getenv("APPROVAL_DESK_BAND_NAME", "MedBand Approval Desk"),
 }
 
 
@@ -133,9 +133,9 @@ def _sanitize_openai_messages(
     return _reconcile_tool_calls(messages)
 
 
-def _force_case_ready_human_mention(tool_input: dict[str, Any]) -> dict[str, Any]:
-    """Make CASE_READY a room message that visibly mentions the approver."""
-    return {**tool_input, "mentions": [CASE_READY_HUMAN_MENTION]}
+def _force_case_ready_approval_desk_mention(tool_input: dict[str, Any]) -> dict[str, Any]:
+    """Make CASE_READY visible to the Approval Desk review target."""
+    return {**tool_input, "mentions": [CASE_READY_APPROVAL_DESK_MENTION]}
 
 
 class OpenAIHistoryConverter(HistoryConverter[OpenAIMessages]):
@@ -338,7 +338,7 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
             if decision.formatted_content:
                 tool_input = {**tool_input, "content": decision.formatted_content}
             if decision.stage == "CASE_READY":
-                tool_input = _force_case_ready_human_mention(tool_input)
+                tool_input = _force_case_ready_approval_desk_mention(tool_input)
             try:
                 result = await tools.execute_tool_call(tool_name, tool_input)
             except Exception as exc:

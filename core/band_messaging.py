@@ -472,7 +472,7 @@ def format_case_ready(payload: dict[str, Any], case_id: str) -> str:
     return strip_em_dash(
         "\n".join(
             [
-                "@medlabbytbr CASE READY FOR HUMAN REVIEW",
+                "@medband-approval-desk CASE READY FOR HUMAN REVIEW",
                 "",
                 "Case ID:",
                 case_id,
@@ -492,8 +492,14 @@ def format_case_ready(payload: dict[str, Any], case_id: str) -> str:
                 "Resource:",
                 availability,
                 "",
+                "Human Reviewer:",
+                "@medlabbytbr",
+                "",
                 "Decision Needed:",
-                "Reply APPROVE or REJECT.",
+                "Human reviewer should reply:",
+                f"@Coordinator APPROVE {case_id}",
+                "or",
+                f"@Coordinator REJECT {case_id}: <reason>",
             ]
         )
     )

@@ -177,7 +177,10 @@ def test_coordinator_prompt_no_case_ready_json_only():
         encoding="utf-8"
     )
     assert "CASE_READY JSON only" not in prompt
-    assert "@medlabbytbr CASE READY FOR HUMAN REVIEW" in prompt
+    assert "@medband-approval-desk CASE READY FOR HUMAN REVIEW" in prompt
+    assert "Human Reviewer:\n@medlabbytbr" in prompt
+    assert "@Coordinator APPROVE {case_id}" in prompt
+    assert "@Coordinator REJECT {case_id}: <reason>" in prompt
 
 
 def test_extract_recipient_from_mentions():
