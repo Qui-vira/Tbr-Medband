@@ -450,10 +450,8 @@ def format_case_ready(payload: dict[str, Any], case_id: str) -> str:
     )
 
     patient = _pick(intake, "requester_name") or _pick(payload, "requester_name", "patient_name")
-    institution = _pick(intake, "institution_name") or _pick(payload, "institution_name") or "Demo Institution"
     request = _pick(intake, "requested_service") or _pick(payload, "requested_service")
     issue = _pick(intake, "presenting_issue")
-    urgency = _title(_pick(intake, "urgency") or "medium")
 
     ver_status = _pick(verification, "status").upper()
     drug = _pick(verification, "drug_name") or request
@@ -471,50 +469,31 @@ def format_case_ready(payload: dict[str, Any], case_id: str) -> str:
     else:
         availability = _pick(resource, "notes") or "Availability confirmed."
 
-    recommended = _pick(payload, "recommended_action") or "Dispense medication after human approval."
-
     return strip_em_dash(
         "\n".join(
             [
-                "📋 CASE READY FOR HUMAN REVIEW",
+                "@medlabbytbr CASE READY FOR HUMAN REVIEW",
                 "",
-                f"Case ID: {case_id}",
+                "Case ID:",
+                case_id,
                 "",
                 "Patient:",
                 patient or "Unknown",
                 "",
-                "Institution:",
-                institution,
+                "Issue:",
+                issue or "Not specified",
                 "",
                 "Request:",
                 request or "Not specified",
                 "",
-                "Issue:",
-                issue or "Not specified",
-                "",
-                "Urgency:",
-                urgency,
-                "",
                 "Verification:",
                 verification_text,
                 "",
-                "Availability:",
+                "Resource:",
                 availability,
                 "",
-                "Recommended Action:",
-                recommended,
-                "",
-                "Human Decision Required:",
-                "To approve this case, type:",
-                "",
-                "APPROVE",
-                "",
-                "To reject this case, type:",
-                "",
-                "REJECT: [reason]",
-                "",
-                "Important:",
-                "No AI has approved this case. Final approval must come from the pharmacist.",
+                "Decision Needed:",
+                "Reply APPROVE or REJECT.",
             ]
         )
     )

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from typing import Any, ClassVar
 
 from openai import AsyncOpenAI
@@ -34,6 +35,12 @@ from core.case_state import (
 logger = logging.getLogger(__name__)
 
 OpenAIMessages = list[dict[str, Any]]
+
+CASE_READY_HUMAN_MENTION = {
+    "id": os.getenv("HUMAN_APPROVER_BAND_ID", "9347ae14-1872-4b98-91b8-430bfbcb8fd7"),
+    "handle": os.getenv("HUMAN_APPROVER_BAND_HANDLE", "medlabbytbr").lstrip("@"),
+    "name": os.getenv("HUMAN_APPROVER_BAND_NAME", "Kehinde-David Damilare"),
+}
 
 
 def _reconcile_tool_calls(messages: OpenAIMessages) -> OpenAIMessages:
@@ -124,6 +131,11 @@ def _sanitize_openai_messages(
     if room_id and is_room_disabled(room_id):
         return messages
     return _reconcile_tool_calls(messages)
+
+
+def _force_case_ready_human_mention(tool_input: dict[str, Any]) -> dict[str, Any]:
+    """Make CASE_READY a room message that visibly mentions the approver."""
+    return {**tool_input, "mentions": [CASE_READY_HUMAN_MENTION]}
 
 
 class OpenAIHistoryConverter(HistoryConverter[OpenAIMessages]):
@@ -324,6 +336,8 @@ class AimlOpenAIAdapter(SimpleAdapter[OpenAIMessages]):
             payload = try_parse_json_payload(content)
             if decision.formatted_content:
                 tool_input = {**tool_input, "content": decision.formatted_content}
+            if decision.stage == "CASE_READY":
+                tool_input = _force_case_ready_human_mention(tool_input)
             try:
                 result = await tools.execute_tool_call(tool_name, tool_input)
             except Exception as exc:
