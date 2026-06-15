@@ -30,6 +30,11 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  --color-teal: var(--teal);
+  --color-green: var(--green);
+  --color-amber: var(--amber);
+  --color-navy: var(--navy);
 }
 
 :root {

@@ -2,6 +2,29 @@ import { LogoMark } from "../LogoMark";
 import { LINKS } from "@/lib/constants";
 import { SECTORS } from "@/lib/sectors";
 
+const TEAM = [
+  {
+    name: "Kehinde-David Damilare Samuel",
+    handle: "Big Quiv",
+    role: "Technical Lead, Product Architect, and Final Submission Owner",
+  },
+  {
+    name: "Olumuyiwa",
+    handle: "@Kedavi",
+    role: "Quality Assurance and Live Demo Tester",
+  },
+  {
+    name: "Ubochi Sandra",
+    handle: "@Sanera",
+    role: "Content, Documentation, and Submission Writer",
+  },
+  {
+    name: "Dennis Paul",
+    handle: "@Bigdennis",
+    role: "Demo Video Producer",
+  },
+];
+
 export default function Footer() {
   return (
     <footer className="relative border-t border-white/10 px-6 md:px-12 py-12">
@@ -9,11 +32,10 @@ export default function Footer() {
         <LogoMark style={{ fontSize: "1.25rem", lineHeight: 1.2 }} />
         <div className="flex gap-6">
           {[
-            { label: "GitHub", href: LINKS.github },
             { label: "Live Demo", href: LINKS.live },
+            { label: "GitHub", href: LINKS.github },
+            { label: "Band", href: LINKS.band },
             { label: "Register Institution", href: LINKS.register },
-            { label: "Pricing", href: `${LINKS.register}#pricing` },
-            { label: "Hackathon", href: LINKS.github },
           ].map((link) => (
             <a
               key={link.label}
@@ -34,17 +56,22 @@ export default function Footer() {
             <LogoMark style={{ fontSize: "1rem", lineHeight: 1.2 }} />
           </p>
           <p className="text-white/40 text-sm leading-relaxed">
-            A sector-configurable multi-agent healthcare workflow engine. Built
-            for Band of Agents Hackathon 2026.
+            A human-in-the-loop healthcare workflow MVP. AI coordinates; humans
+            decide. Built for Band of Agents Hackathon 2026.
           </p>
         </div>
         <div>
-          <p className="font-medium text-white text-sm mb-3">Sectors</p>
+          <p className="font-medium text-white text-sm mb-3">MVP Scope</p>
           <ul className="space-y-2">
             {SECTORS.map((s) => (
               <li key={s.env}>
-                <span className="text-white/40 text-sm hover:text-white transition cursor-default">
+                <span className="text-white/40 text-sm cursor-default">
                   {s.name}
+                  {s.active ? (
+                    <span className="text-green"> · Live</span>
+                  ) : (
+                    <span className="text-amber/80"> · Roadmap</span>
+                  )}
                 </span>
               </li>
             ))}
@@ -59,6 +86,26 @@ export default function Footer() {
             Turning ideas into real products, businesses, and income-generating
             opportunities.
           </p>
+        </div>
+      </div>
+
+      <div className="mt-8 pt-8 border-t border-white/10">
+        <p className="font-medium text-white text-sm mb-4">Team</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {TEAM.map((member) => (
+            <div
+              key={member.name}
+              className="rounded-xl border border-white/10 bg-card px-4 py-4"
+            >
+              <p className="font-display font-bold text-sm text-white leading-snug">
+                {member.name}
+              </p>
+              <p className="text-teal text-xs mt-0.5">{member.handle}</p>
+              <p className="text-white/45 text-xs mt-2 leading-relaxed">
+                {member.role}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 

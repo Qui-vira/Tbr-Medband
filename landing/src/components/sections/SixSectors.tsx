@@ -10,8 +10,10 @@ import {
   viewBlurIn,
   viewFadeIn,
 } from "@/lib/motion";
-import { SECTOR_NAMES, SECTORS } from "@/lib/sectors";
+import { SECTORS } from "@/lib/sectors";
 import { useIsMobile } from "@/lib/useIsMobile";
+
+const ROADMAP_NAMES = SECTORS.filter((s) => s.roadmap).map((s) => s.name);
 
 export default function SixSectors() {
   const isMobile = useIsMobile();
@@ -20,7 +22,7 @@ export default function SixSectors() {
 
   useEffect(() => {
     const t = setInterval(
-      () => setCycleIndex((i) => (i + 1) % SECTOR_NAMES.length),
+      () => setCycleIndex((i) => (i + 1) % ROADMAP_NAMES.length),
       2000,
     );
     return () => clearInterval(t);
@@ -49,9 +51,9 @@ export default function SixSectors() {
           whileInView="show"
           viewport={{ once: true, margin: "-100px" }}
         >
-          Six Healthcare
+          MVP
           <br />
-          Sectors
+          Scope
         </m.h2>
         <div>
           <m.p
@@ -61,8 +63,9 @@ export default function SixSectors() {
             whileInView="show"
             viewport={{ once: true, margin: "-100px" }}
           >
-            One workflow engine. Switch one environment variable and MedBand runs
-            for a completely different healthcare sector. No code changes.
+            Pharmacy is the live, production-verified workflow. The other sectors
+            are on the roadmap — the same human-in-the-loop pattern, not yet
+            built.
           </m.p>
           <m.div
             className="mt-6 flex items-center gap-3 text-sm text-white/50"
@@ -71,9 +74,9 @@ export default function SixSectors() {
             whileInView="show"
             viewport={{ once: true, margin: "-100px" }}
           >
-            <span>Switch sector:</span>
-            <span className="inline-flex items-center rounded-full border border-teal/30 bg-teal/10 px-3 py-1 text-teal font-medium min-w-[140px] justify-center">
-              {SECTOR_NAMES[cycleIndex]}
+            <span>Coming next:</span>
+            <span className="inline-flex items-center rounded-full border border-amber/30 bg-amber/10 px-3 py-1 text-amber font-medium min-w-[140px] justify-center">
+              {ROADMAP_NAMES[cycleIndex]}
             </span>
           </m.div>
         </div>
@@ -101,7 +104,12 @@ export default function SixSectors() {
             {sector.active && (
               <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-green/20 border border-green/30 px-2 py-0.5 text-xs text-green">
                 <span className="w-1.5 h-1.5 rounded-full bg-green" />
-                Demo Sector
+                Live MVP
+              </span>
+            )}
+            {sector.roadmap && (
+              <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-amber/15 border border-amber/30 px-2 py-0.5 text-xs text-amber">
+                Roadmap
               </span>
             )}
             <div className="mt-4">

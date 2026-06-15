@@ -2,10 +2,12 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
 import {
   ArrowUpRight,
+  CheckCircle2,
   ChevronRight,
   Github,
   Menu,
   Pill,
+  ShieldCheck,
   Siren,
   X,
 } from "lucide-react";
@@ -41,8 +43,8 @@ function TopBar() {
 
   const navLinks = [
     { label: "How it Works", action: () => scrollTo("how-it-works") },
-    { label: "Sectors", action: () => scrollTo("sectors") },
-    { label: "Band Integration", action: () => scrollTo("band-integration") },
+    { label: "Proof", action: () => scrollTo("proof") },
+    { label: "MVP Scope", action: () => scrollTo("sectors") },
     { label: "GitHub", href: LINKS.github },
   ];
 
@@ -320,26 +322,46 @@ function HeroSection() {
         </m.div>
 
         <m.h1
-          className="font-display font-black text-5xl md:text-6xl lg:text-7xl xl:text-[80px] 2xl:text-[90px] leading-[0.95] tracking-tight max-w-4xl"
+          className="font-display font-black text-6xl md:text-7xl lg:text-8xl xl:text-[110px] leading-[0.95] tracking-tight"
           variants={blurIn}
           initial="hidden"
           animate="show"
           custom={1}
         >
-          Healthcare Requests,
-          <br />
-          <span className="text-teal">Intelligently</span> Routed
+          Med<span className="text-teal">Band</span>
         </m.h1>
 
         <m.p
-          className="mt-8 text-white/55 text-base md:text-lg leading-relaxed max-w-xl mx-auto"
+          className="mt-6 font-display text-xl md:text-2xl text-white/85 max-w-2xl mx-auto leading-snug"
+          variants={blurIn}
+          initial="hidden"
+          animate="show"
+          custom={2}
+        >
+          Human-in-the-loop healthcare workflow powered by Band AI agents.
+        </m.p>
+
+        <m.p
+          className="mt-6 text-white/55 text-base md:text-lg leading-relaxed max-w-xl mx-auto"
           variants={blurIn}
           initial="hidden"
           animate="show"
           custom={3}
         >
-          Four AI agents verify, check, and prepare every healthcare case before
-          a human professional makes the final decision. Six sectors. One engine.
+          MedBand coordinates patient service requests across intake,
+          verification, resource availability, and human approval. AI agents
+          move the workflow forward, but the final decision stays with a human
+          reviewer.
+        </m.p>
+
+        <m.p
+          className="mt-6 font-display font-bold text-lg md:text-xl tracking-tight"
+          variants={blurIn}
+          initial="hidden"
+          animate="show"
+          custom={3}
+        >
+          AI coordinates. <span className="text-teal">Humans decide.</span>
         </m.p>
 
         <m.div
@@ -355,7 +377,7 @@ function HeroSection() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-full bg-teal text-white px-8 py-3 font-medium hover:bg-teal/80 transition"
           >
-            Submit a Case
+            Open Live Demo
             <ArrowUpRight className="w-4 h-4" />
           </a>
           <a
@@ -364,7 +386,7 @@ function HeroSection() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-full border border-white/20 text-white/70 px-8 py-3 hover:bg-white/5 transition"
           >
-            View on GitHub
+            View GitHub
             <Github className="w-4 h-4" />
           </a>
         </m.div>
@@ -372,8 +394,8 @@ function HeroSection() {
 
       <div className="relative z-10 mt-20 flex gap-12 justify-center flex-wrap px-6">
         {[
-          { num: "4", label: "Multi-Agent" },
-          { num: "6", label: "Healthcare Sectors" },
+          { num: "1", label: "Live Pharmacy Workflow" },
+          { num: "7", label: "Coordinated Roles" },
           { num: "100%", label: "Human Approval" },
         ].map((stat, i) => (
           <m.div
@@ -430,6 +452,125 @@ function MobileFloatingCTA() {
   );
 }
 
+const PROOF_ROWS = [
+  { label: "Case ID", value: "MEDBAND-WEB-989E388C" },
+  { label: "Sector", value: "Pharmacy" },
+  { label: "Institution", value: "Peaceway Pharmacy (PHM001)" },
+  { label: "Patient", value: "Band Human Approval Participant Test" },
+  { label: "Issue", value: "BODY PAINS" },
+  { label: "Request", value: "PARACETAMOL" },
+];
+
+function ProofSection() {
+  return (
+    <section
+      id="proof"
+      className={`${MATTE} relative px-6 md:px-12 py-32 overflow-hidden`}
+    >
+      <NoiseOverlay />
+      <div
+        className="absolute -right-20 top-1/3 w-[500px] h-[500px] rounded-full bg-green/[0.04] blur-3xl pointer-events-none"
+        style={{ zIndex: 1 }}
+      />
+      <m.div
+        className="relative z-[2] max-w-5xl mx-auto"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.7, ease: EASE }}
+      >
+        <span className="inline-flex items-center gap-2 rounded-full border border-green/30 bg-green/10 px-3 py-1 text-xs uppercase tracking-widest text-green">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          Production MVP Verified
+        </span>
+        <h2 className="mt-6 font-display font-black text-4xl md:text-5xl leading-[1.0] text-white">
+          From web submission to{" "}
+          <span className="text-green">CASE APPROVED</span>
+        </h2>
+        <p className="mt-6 text-white/60 text-base md:text-lg max-w-2xl leading-relaxed">
+          Case <span className="font-mono text-white/80">MEDBAND-WEB-989E388C</span>{" "}
+          moved from web submission to CASE APPROVED. BODY PAINS, PARACETAMOL,
+          and Peaceway Pharmacy were preserved through the workflow.
+        </p>
+        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {PROOF_ROWS.map((row) => (
+            <div
+              key={row.label}
+              className="rounded-xl border border-white/10 bg-card px-4 py-3"
+            >
+              <div className="text-[11px] uppercase tracking-widest text-white/40">
+                {row.label}
+              </div>
+              <div className="mt-1 text-sm text-white/85 break-words">
+                {row.value}
+              </div>
+            </div>
+          ))}
+          <div className="rounded-xl border border-green/30 bg-green/10 px-4 py-3">
+            <div className="text-[11px] uppercase tracking-widest text-green/80">
+              Final result
+            </div>
+            <div className="mt-1 text-sm font-bold text-green">
+              CASE APPROVED
+            </div>
+          </div>
+        </div>
+        <p className="mt-8 max-w-2xl border-l-2 border-green/50 pl-4 text-white/70 text-sm md:text-base">
+          No AI approved this case. Final approval was made by the human
+          reviewer.
+        </p>
+      </m.div>
+    </section>
+  );
+}
+
+const SAFETY_POINTS = [
+  "AI does not make final approval decisions.",
+  "The Approval Desk does not approve cases.",
+  "A human reviewer must manually approve or reject.",
+  "MedBand is workflow support, not a replacement for licensed medical professionals.",
+  "This is a hackathon MVP, not a full medical product.",
+];
+
+function SafetySection() {
+  return (
+    <section
+      id="safety"
+      className={`${MATTE} relative px-6 md:px-12 py-32 overflow-hidden`}
+    >
+      <NoiseOverlay />
+      <m.div
+        className="relative z-[2] max-w-5xl mx-auto"
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.7, ease: EASE }}
+      >
+        <span className="inline-flex items-center gap-2 rounded-full border border-teal/30 bg-teal/10 px-3 py-1 text-xs uppercase tracking-widest text-teal">
+          <ShieldCheck className="w-3.5 h-3.5" />
+          Human-in-the-loop safety
+        </span>
+        <h2 className="mt-6 font-display font-black text-4xl md:text-5xl leading-[1.0] text-white">
+          The final decision is always human
+        </h2>
+        <ul className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {SAFETY_POINTS.map((point) => (
+            <li
+              key={point}
+              className="flex items-start gap-3 rounded-xl border border-white/10 bg-card px-4 py-4"
+            >
+              <ShieldCheck className="w-5 h-5 text-teal shrink-0 mt-0.5" />
+              <span className="text-white/70 text-sm leading-relaxed">
+                {point}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </m.div>
+    </section>
+  );
+}
+
 export function MedBandLanding() {
   return (
     <LazyMotion features={domAnimation}>
@@ -438,6 +579,7 @@ export function MedBandLanding() {
       <MobileFloatingCTA />
       <main>
         <HeroSection />
+        <ProofSection />
         <ViewportSection>
           <Suspense fallback={<SectionFallback />}>
             <HowItWorks />
@@ -448,6 +590,7 @@ export function MedBandLanding() {
             <SixSectors />
           </Suspense>
         </ViewportSection>
+        <SafetySection />
         <ViewportSection>
           <Suspense fallback={<SectionFallback />}>
             <TrustedInstitutions />

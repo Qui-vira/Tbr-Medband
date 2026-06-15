@@ -9,7 +9,7 @@ import {
   viewBlurIn,
   viewFadeIn,
 } from "@/lib/motion";
-import { STEPS, TIMELINE_NODES } from "@/lib/sectors";
+import { AGENT_ROLES, STEPS, TIMELINE_NODES } from "@/lib/sectors";
 import { useIsMobile } from "@/lib/useIsMobile";
 
 export default function HowItWorks() {
@@ -48,9 +48,10 @@ export default function HowItWorks() {
           whileInView="show"
           viewport={{ once: true, margin: "-100px" }}
         >
-          MedBand uses four specialized AI agents coordinating through Band
-          rooms to process any healthcare request. Every handoff is visible,
-          traceable, and auditable.
+          The working MVP is one complete Pharmacy workflow. AI agents
+          coordinate each case through Band rooms — every handoff is visible,
+          traceable, and tracked in Postgres — while a human reviewer keeps
+          final approval.
         </m.p>
       </div>
 
@@ -100,6 +101,56 @@ export default function HowItWorks() {
                 <div className="flex-1 h-px bg-white/20 mt-1.5 mx-1" />
               )}
             </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative z-[2] max-w-7xl mx-auto mt-28">
+        <m.h3
+          className="font-display font-bold text-3xl md:text-4xl text-white"
+          variants={headingVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+        >
+          Agent roles
+        </m.h3>
+        <m.p
+          className="text-white/55 text-[15px] max-w-md leading-relaxed mt-3"
+          variants={headingVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+        >
+          Seven roles move each case forward. Only the human reviewer can
+          approve or reject.
+        </m.p>
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {AGENT_ROLES.map((role, i) => (
+            <m.div
+              key={role.name}
+              className={`rounded-2xl border bg-card p-5 transition ${
+                role.name === "Human Reviewer"
+                  ? "border-green/40 hover:border-green/60"
+                  : "border-white/10 hover:border-teal/30"
+              }`}
+              variants={isMobile ? mobileCardIn : desktopStepIn}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-80px" }}
+              custom={i}
+            >
+              <h4
+                className={`font-display font-bold text-base ${
+                  role.name === "Human Reviewer" ? "text-green" : "text-white"
+                }`}
+              >
+                {role.name}
+              </h4>
+              <p className="text-white/55 text-sm mt-2 leading-relaxed">
+                {role.body}
+              </p>
+            </m.div>
           ))}
         </div>
       </div>

@@ -1,5 +1,14 @@
 import { m } from "framer-motion";
-import { ArrowUpRight } from "lucide-react";
+import {
+  ArrowUpRight,
+  Brain,
+  FlaskConical,
+  Heart,
+  Pill,
+  Shield,
+  Siren,
+  type LucideIcon,
+} from "lucide-react";
 import { LineField } from "../LineField";
 import { StarField } from "../StarField";
 import { NoiseOverlay } from "../shared/landing-ui";
@@ -11,8 +20,60 @@ import {
   viewFadeIn,
   viewFadeUp,
 } from "@/lib/motion";
-import { FEATURED_INSTITUTIONS } from "@/lib/sectors";
 import { useIsMobile } from "@/lib/useIsMobile";
+
+type InstitutionCard = {
+  name: string;
+  sector: string;
+  icon: LucideIcon;
+  status: "Live MVP" | "Roadmap";
+  note: string;
+};
+
+const INSTITUTION_CARDS: InstitutionCard[] = [
+  {
+    name: "Peaceway Pharmacy",
+    sector: "Pharmacy",
+    icon: Pill,
+    status: "Live MVP",
+    note: "Pilot institution for the live, production-verified Pharmacy workflow.",
+  },
+  {
+    name: "Hospital Triage",
+    sector: "Hospitals",
+    icon: Heart,
+    status: "Roadmap",
+    note: "Example target sector for future expansion.",
+  },
+  {
+    name: "Lab / Diagnostics",
+    sector: "Diagnostics",
+    icon: FlaskConical,
+    status: "Roadmap",
+    note: "Example target sector for future expansion.",
+  },
+  {
+    name: "HMO / Insurance",
+    sector: "Insurance",
+    icon: Shield,
+    status: "Roadmap",
+    note: "Example target sector for future expansion.",
+  },
+  {
+    name: "Mental Health",
+    sector: "Wellness",
+    icon: Brain,
+    status: "Roadmap",
+    note: "Example target sector for future expansion.",
+  },
+  {
+    name: "Emergency Dispatch",
+    sector: "Emergency",
+    icon: Siren,
+    status: "Roadmap",
+    note: "Example target sector for future expansion.",
+  },
+];
 
 export default function TrustedInstitutions() {
   const isMobile = useIsMobile();
@@ -39,9 +100,9 @@ export default function TrustedInstitutions() {
           whileInView="show"
           viewport={{ once: true, margin: "-100px" }}
         >
-          Institutions Already
+          Built for Healthcare
           <br />
-          On MedBand
+          Institutions
         </m.h2>
         <m.p
           className="text-white/55 text-[15px] max-w-md leading-relaxed self-end"
@@ -50,75 +111,64 @@ export default function TrustedInstitutions() {
           whileInView="show"
           viewport={{ once: true, margin: "-100px" }}
         >
-          Healthcare institutions across six sectors are already routing cases
-          through MedBand. Join the network and connect your workflow to the
-          multi-agent engine.
+          Proven first with Pharmacy. MedBand's live MVP is proven through a
+          Pharmacy workflow with Peaceway Pharmacy. The same human-in-the-loop
+          architecture can later expand to hospitals, labs, HMOs, mental health
+          teams, and emergency dispatch partners.
         </m.p>
       </div>
 
       <div className="relative z-[2] max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-        {FEATURED_INSTITUTIONS.map((inst, i) => (
-          <m.div
-            key={inst.id}
-            className="rounded-2xl p-6 border border-white/10 bg-[oklch(0.11_0.006_220)] hover:border-teal/40 hover:bg-[oklch(0.13_0.008_220)] transition-all duration-300"
-            variants={isMobile ? mobileCardIn : desktopCardIn(i * 0.08)}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-          >
-            <div className="flex items-start gap-4">
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center font-display font-bold text-lg text-white shrink-0"
-                style={{ backgroundColor: inst.logo_color }}
-              >
-                {inst.logo_initial}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-display font-bold text-lg text-white truncate">
-                  {inst.name}
-                </h3>
-                <p className="text-white/50 text-sm mt-0.5">{inst.location}</p>
-              </div>
-            </div>
-
-            <span className="mt-4 inline-flex rounded-full border border-teal/20 px-2 py-0.5 text-xs text-teal/80 bg-teal/5">
-              {inst.sector}
-            </span>
-
-            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-lg bg-white/[0.03] px-2 py-2">
-                <div className="font-display font-bold text-teal text-sm">
-                  {inst.rating}
-                </div>
-                <div className="text-white/40 text-[10px] mt-0.5">Rating</div>
-              </div>
-              <div className="rounded-lg bg-white/[0.03] px-2 py-2">
-                <div className="font-display font-bold text-teal text-sm">
-                  {inst.cases_processed.toLocaleString()}
-                </div>
-                <div className="text-white/40 text-[10px] mt-0.5">Cases</div>
-              </div>
-              <div className="rounded-lg bg-white/[0.03] px-2 py-2">
-                <div className="font-display font-bold text-teal text-xs leading-tight">
-                  {inst.turnaround}
-                </div>
-                <div className="text-white/40 text-[10px] mt-0.5">
-                  Turnaround
-                </div>
-              </div>
-            </div>
-
-            <span
-              className={`mt-4 inline-flex rounded-full px-2 py-0.5 text-xs capitalize ${
-                inst.plan === "enterprise"
-                  ? "bg-teal/20 border border-teal/30 text-teal"
-                  : "bg-white/10 border border-white/20 text-white/70"
+        {INSTITUTION_CARDS.map((card, i) => {
+          const isLive = card.status === "Live MVP";
+          return (
+            <m.div
+              key={card.name}
+              className={`rounded-2xl p-6 border bg-[oklch(0.11_0.006_220)] transition-all duration-300 ${
+                isLive
+                  ? "border-green/40 hover:border-green/60"
+                  : "border-white/10 hover:border-amber/40"
               }`}
+              variants={isMobile ? mobileCardIn : desktopCardIn(i * 0.08)}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-80px" }}
             >
-              {inst.plan}
-            </span>
-          </m.div>
-        ))}
+              <div className="flex items-start gap-4">
+                <div
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                    isLive ? "bg-green/15" : "bg-white/[0.04]"
+                  }`}
+                >
+                  <card.icon
+                    className={`w-6 h-6 ${isLive ? "text-green" : "text-teal"}`}
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-display font-bold text-lg text-white truncate">
+                    {card.name}
+                  </h3>
+                  <p className="text-white/50 text-sm mt-0.5">{card.sector}</p>
+                </div>
+              </div>
+
+              <p className="text-white/55 text-sm mt-4 leading-relaxed">
+                {card.note}
+              </p>
+
+              {isLive ? (
+                <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-green/20 border border-green/30 px-2 py-0.5 text-xs text-green">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green" />
+                  Live MVP
+                </span>
+              ) : (
+                <span className="mt-4 inline-flex items-center rounded-full bg-amber/15 border border-amber/30 px-2 py-0.5 text-xs text-amber">
+                  Roadmap
+                </span>
+              )}
+            </m.div>
+          );
+        })}
       </div>
 
       <m.div

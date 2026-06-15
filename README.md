@@ -2,6 +2,8 @@
 
 A human-in-the-loop healthcare workflow MVP where Band AI agents coordinate patient service requests while a human reviewer keeps final approval control.
 
+**AI coordinates. Humans decide.**
+
 Built by **The Billionaire Republic (TBR)** for the Band of Agents Hackathon 2026 — **Track 3: Regulated and High-Stakes Workflows**.
 
 ## Problem
@@ -230,4 +232,11 @@ This MVP intentionally focuses on one polished end-to-end workflow (Pharmacy) in
 
 ## Team
 
-The Billionaire Republic (TBR) — Band of Agents Hackathon 2026
+Built by **The Billionaire Republic (TBR)** — Band of Agents Hackathon 2026.
+
+| Member | Role |
+|--------|------|
+| Kehinde-David Damilare Samuel (Big Quiv) | Technical Lead, Product Architect, and Final Submission Owner |
+| Olumuyiwa (@Kedavi) | Quality Assurance and Live Demo Tester |
+| Ubochi Sandra (@Sanera) | Content, Documentation, and Submission Writer |
+| Dennis Paul (@Bigdennis) | Demo Video Producer |
